@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # Python cache
 __pycache__/
 *.pyc
@@ -24,59 +23,4 @@ __pycache__/
 .DS_Store
 
 *.json
-=======
-<<<<<<< HEAD
-# Python cache
-__pycache__/
-*.pyc
-*.pyo
-*.pyd
-.Python
-*.py[cod]
-*$py.class
-
-# Environment
-.env
-
-# Database and cache files
-*.pkl
-*.db
-*.sqlite
-*.sqlite3
-
-# IDE
-.vscode/
-.idea/
-*.swp
-.DS_Store
-
-*.json
-=======
-# Python cache
-__pycache__/
-*.pyc
-*.pyo
-*.pyd
-.Python
-*.py[cod]
-*$py.class
-
-# Environment
-.env
-
-# Database and cache files
-*.pkl
-*.db
-*.sqlite
-*.sqlite3
-
-# IDE
-.vscode/
-.idea/
-*.swp
-.DS_Store
-
-*.json
->>>>>>> d64e546 (Improved admin command)
->>>>>>> 95e1e84 (Improved admin command)
 database2.py

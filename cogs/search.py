@@ -1,182 +1,169 @@
 import discord
 from discord import app_commands
 from discord.ext import commands
-import requests
 from datetime import datetime
-from typing import Optional
-from collections import defaultdict
-from utils.database import dbManager
+import aiohttp
+from typing import Dict, List, Optional
+from dataclasses import dataclass
 
-class BankSearch(commands.Cog):
+@dataclass
+class ItemLocation:
+    container: str
+    slot: Optional[int] = None
+    count: int = 0
+
+@dataclass
+class ItemInfo:
+    id: int
+    name: str
+
+class GW2InventorySearch:
+    def __init__(self, api_key: str):
+        self.base_url = "https://api.guildwars2.com/v2"
+        self.headers = {"Authorization": f"Bearer {api_key}"}
+
+    async def _fetch(self, endpoint: str, params: Optional[Dict] = None) -> List:
+        """Fetch data from GW2 API with pagination support"""
+        if params is None:
+            params = {}
+        all_data = []
+        params["page"] = 0
+        
+        async with aiohttp.ClientSession() as session:
+            while True:
+                async with session.get(f"{self.base_url}{endpoint}", headers=self.headers, params=params) as resp:
+                    if resp.status not in (200, 206):
+                        raise ValueError(f"API error: {resp.status}")
+                    data = await resp.json()
+                    all_data.extend(data)
+                    if "X-Page-Total" not in resp.headers or int(resp.headers["X-Page-Total"]) <= params["page"] + 1:
+                        break
+                    params["page"] += 1
+        return all_data
+
+    async def _get_item_details(self, item_ids: List[int]) -> Dict[int, ItemInfo]:
+        """Fetch item details in chunks"""
+        items = {}
+        for i in range(0, len(item_ids), 200):
+            chunk = item_ids[i:i + 200]
+            data = await self._fetch("/items", {"ids": ",".join(map(str, chunk))})
+            for item in data:
+                items[item["id"]] = ItemInfo(id=item["id"], name=item["name"])
+        return items
+
+    async def search_bank_and_storage(self, search_term: str) -> Dict[str, Dict[str, int]]:
+        """Search items in bank and material storage, returning totals by location"""
+        results = {}
+        item_ids = set()
+
+        # Fetch bank and material storage
+        bank = await self._fetch("/account/bank")
+        materials = await self._fetch("/account/materials")
+
+        # Collect item IDs
+        for slot in bank:
+            if slot and "id" in slot:
+                item_ids.add(slot["id"])
+        for mat in materials:
+            if mat and "id" in mat and mat["count"] > 0:
+                item_ids.add(mat["id"])
+
+        # Get item details
+        items_dict = await self._get_item_details(list(item_ids))
+
+        # Search bank
+        for slot in bank:
+            if slot and "id" in slot:
+                item = items_dict.get(slot["id"])
+                if item and search_term.lower() in item.name.lower():
+                    if item.name not in results:
+                        results[item.name] = {"Bank": 0, "Material Storage": 0}
+                    results[item.name]["Bank"] += slot["count"]
+
+        # Search material storage
+        for mat in materials:
+            if mat and "id" in mat and mat["count"] > 0:
+                item = items_dict.get(mat["id"])
+                if item and search_term.lower() in item.name.lower():
+                    if item.name not in results:
+                        results[item.name] = {"Bank": 0, "Material Storage": 0}
+                    results[item.name]["Material Storage"] += mat["count"]
+
+        return results
+
+class InventorySearchCog(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
-        self.db_ready = False
+        self.db = bot.db  # Asume que dbManager está en bot.db
         
-        self.bank_group = app_commands.Group(name="bank", description="Busca objetos en tu banco de GW2")
-        
-        self.bank_group.add_command(app_commands.Command(
-            name="search",
-            description="Busca materiales en tu banco",
-            callback=self.search_material,
-            extras={"command_type": "search"}
-        ))
-        
-        bot.tree.add_command(self.bank_group)
+        @bot.tree.command(name="inventory", description="Busca ítems en tu banco y almacenamiento")
+        @app_commands.describe(search="Nombre del ítem a buscar")
+        async def inventory(interaction: discord.Interaction, search: str):
+            await self._search(interaction, search)
 
-    def get_bag_info(self, slot):
-        """Calcula el número de saco basado en el slot"""
-        SLOTS_PER_BAG = 30
-        bag_number = (slot - 1) // SLOTS_PER_BAG + 1
-        slot_in_bag = (slot - 1) % SLOTS_PER_BAG + 1
-        return bag_number, slot_in_bag
-
-    def format_slot_info(self, slots):
-        """Formatea la información de slots con sus respectivos sacos"""
-        if len(slots) <= 3:
-            slot_info = []
-            for slot in slots:
-                bag_num, bag_slot = self.get_bag_info(slot)
-                slot_info.append(f"Saco {bag_num} (slot {bag_slot})")
-            return "Ubicación: " + ", ".join(slot_info)
-        else:
-            bags = defaultdict(list)
-            for slot in slots:
-                bag_num, bag_slot = self.get_bag_info(slot)
-                bags[bag_num].append(bag_slot)
-            
-            bag_info = []
-            for bag_num in sorted(bags.keys()):
-                slots_in_bag = len(bags[bag_num])
-                bag_info.append(f"Saco {bag_num} ({slots_in_bag} slots)")
-            
-            return f"Encontrado en {len(bags)} sacos: {', '.join(bag_info)}"
-
-    async def search_material(self, interaction: discord.Interaction, material: str):
-        # Cambiado a False para que el resultado sea visible para todos
-        await interaction.response.defer(ephemeral=False)
+    async def _search(self, interaction: discord.Interaction, search_term: str):
+        """Handle inventory search command"""
+        await interaction.response.defer()
         
         try:
-            user_id = str(interaction.user.id)
-            api_key = await dbManager.getApiKey(user_id)
-            
+            # Get API key from database
+            api_key = await self.db.getApiKey(str(interaction.user.id))
             if not api_key:
                 embed = discord.Embed(
-                    title="❌ API Key no encontrada",
-                    description="Por favor, añade tu API key primero usando `/apikey add`",
+                    title="❌ Sin API Key",
+                    description="Usa `/apikey add` para añadir tu clave.",
                     color=discord.Color.red(),
                     timestamp=datetime.now()
                 )
                 await interaction.followup.send(embed=embed)
                 return
 
-            headers = {
-                'Authorization': f'Bearer {api_key}'
-            }
-            
-            bank_response = requests.get(
-                'https://api.guildwars2.com/v2/account/bank',
-                headers=headers
+            # Search inventory
+            searcher = GW2InventorySearch(api_key)
+            results = await searcher.search_bank_and_storage(search_term)
+
+            # Build response
+            embed = discord.Embed(
+                title="🔍 Resultados",
+                description=f"Buscando '{search_term}' en la cuenta de {interaction.user.display_name}:",
+                color=discord.Color.blue(),
+                timestamp=datetime.now()
             )
-            bank_response.raise_for_status()
-            bank_items = [item for item in bank_response.json() if item]
 
-            if not bank_items:
-                embed = discord.Embed(
-                    title="📦 Resultados de búsqueda",
-                    description=f"¡El banco de {interaction.user.display_name} está vacío!",
-                    color=discord.Color.yellow(),
-                    timestamp=datetime.now()
-                )
-                await interaction.followup.send(embed=embed)
-                return
-
-            item_ids = ','.join(str(item['id']) for item in bank_items)
-            items_response = requests.get(
-                f'https://api.guildwars2.com/v2/items?ids={item_ids}'
-            )
-            items_response.raise_for_status()
-            items_data = {item['id']: item for item in items_response.json()}
-
-            grouped_items = defaultdict(lambda: {
-                'total_quantity': 0,
-                'slots': [],
-                'details': None
-            })
-
-            for slot_index, item in enumerate(bank_response.json()):
-                if item is None:
-                    continue
-                
-                item_details = items_data.get(item['id'])
-                if item_details and material.lower() in item_details['name'].lower():
-                    key = f"{item_details['name']}_{item_details.get('rarity', 'Desconocido')}"
-                    grouped_items[key]['total_quantity'] += item['count']
-                    grouped_items[key]['slots'].append(slot_index + 1)
-                    if not grouped_items[key]['details']:
-                        grouped_items[key]['details'] = {
-                            'name': item_details['name'],
-                            'rarity': item_details.get('rarity', 'Desconocido'),
-                            'icon': item_details.get('icon', '')
-                        }
-
-            if grouped_items:
-                embed = discord.Embed(
-                    title="🔍 Resultados de búsqueda",
-                    description=f"Objetos encontrados en el banco de {interaction.user.display_name} que coinciden con '{material}':",
-                    color=discord.Color.blue(),
-                    timestamp=datetime.now()
-                )
-                
-                first_item = True
-                for item_data in grouped_items.values():
-                    details = item_data['details']
-                    slot_info = self.format_slot_info(item_data['slots'])
-                    
+            if results:
+                for name, counts in results.items():
+                    total = counts["Bank"] + counts["Material Storage"]
+                    locations_str = []
+                    if counts["Bank"] > 0:
+                        locations_str.append(f"📦 Banco | {counts['Bank']}")
+                    if counts["Material Storage"] > 0:
+                        locations_str.append(f"🗄️ Almacenamiento | {counts['Material Storage']}")
                     embed.add_field(
-                        name=f"{details['name']} ({details['rarity']})",
-                        value=f"Cantidad total: {item_data['total_quantity']}\n{slot_info}",
+                        name=f"📌 {name} (Total: {total})",
+                        value="\n".join(locations_str),
                         inline=False
                     )
-                    
-                    if first_item and details['icon']:
-                        embed.set_thumbnail(url=details['icon'])
-                        first_item = False
             else:
-                embed = discord.Embed(
-                    title="🔍 Resultados de búsqueda",
-                    description=f"No se encontraron objetos en el banco de {interaction.user.display_name} que coincidan con '{material}'",
-                    color=discord.Color.yellow(),
-                    timestamp=datetime.now()
-                )
+                embed.description = f"No se encontró '{search_term}'."
 
             await interaction.followup.send(embed=embed)
 
-        except requests.exceptions.HTTPError as e:
-            if e.response.status_code == 401:
-                embed = discord.Embed(
-                    title="❌ API Key inválida",
-                    description="Tu API key es inválida o no tiene los permisos necesarios.",
-                    color=discord.Color.red(),
-                    timestamp=datetime.now()
-                )
-            else:
-                embed = discord.Embed(
-                    title="❌ Error de API",
-                    description=f"Error al acceder a la API de GW2: {str(e)}",
-                    color=discord.Color.red(),
-                    timestamp=datetime.now()
-                )
-            await interaction.followup.send(embed=embed)
-            
-        except Exception as error:
+        except ValueError as e:
             embed = discord.Embed(
-                title="❌ Error",
-                description="Ocurrió un error inesperado al buscar en tu banco.",
+                title="❌ Error de API",
+                description=str(e),
                 color=discord.Color.red(),
                 timestamp=datetime.now()
             )
-            embed.add_field(name="Detalles del error", value=f"```{str(error)}```")
+            await interaction.followup.send(embed=embed)
+        except Exception as e:
+            embed = discord.Embed(
+                title="❌ Error",
+                description=f"Error inesperado: {str(e)}",
+                color=discord.Color.red(),
+                timestamp=datetime.now()
+            )
             await interaction.followup.send(embed=embed)
 
 async def setup(bot: commands.Bot):
-    await bot.add_cog(BankSearch(bot))
+    await bot.add_cog(InventorySearchCog(bot))

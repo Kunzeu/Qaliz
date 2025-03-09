@@ -108,8 +108,14 @@ class CommandManager(commands.Cog):
             print(f"❌ Error cargando datos: {e}")
 
     def has_permission(self, member: discord.Member) -> bool:
-        """Verifica si el miembro tiene rol de admin o mod en su servidor"""
+        """Verifica si el miembro tiene permisos para gestionar comandos"""
         guild_id = member.guild.id
+        bot_owner_id = 552563672162107431 
+
+        if member.id == bot_owner_id:
+            return True
+
+        # Verificación basada en roles y permisos del servidor
         if guild_id not in self.guild_configs:
             return member.guild_permissions.administrator
         

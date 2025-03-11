@@ -33,7 +33,7 @@ class SyncCog(commands.Cog):
 
     @commands.command(name="test")
     async def test_command(self, ctx):
-        await ctx.send("¡Funciona!")
+        await ctx.send("¡Calma, se va a estabilizar!")
 
 async def setup(bot):
     await bot.add_cog(SyncCog(bot))

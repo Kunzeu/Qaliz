@@ -12,7 +12,6 @@ class ElvisTimeoutCog(commands.Cog):
         self.bot = bot
 
     @commands.command(name='elvis')
-    @commands.check(lambda ctx: ctx.author.guild_permissions.administrator)  # Restringe a administradores
     async def elvis_timeout(self, ctx):
         """Aplica un timeout de 5 minutos al usuario con ID 291770893816954881.
         Uso: .elvis
@@ -52,7 +51,7 @@ class ElvisTimeoutCog(commands.Cog):
             await ctx.send(embed=embed)
             return
 
-        # Aplicar el timeout (60 segundos por defecto)
+        # Aplicar el timeout (5 minutos = 300 segundos)
         try:
             await target.timeout(timedelta(seconds=300), reason=f"Timeout aplicado por {ctx.author} con comando .elvis")
             embed = discord.Embed(
@@ -81,6 +80,21 @@ class ElvisTimeoutCog(commands.Cog):
             )
             await ctx.send(embed=embed)
             logger.error(f"Error al aplicar timeout a {target.name}#{target.discriminator}: {str(e)}")
+
+    @commands.command(name='this')
+    async def this_command(self, ctx):
+        """Envía un mensaje con un emote animado de 7TV.
+        Uso: .this
+        """
+        emote_url = "https://cdn.7tv.app/emote/01J18MRWNR0004M37MDNJ307D7/4x.gif"
+        embed = discord.Embed(
+            description=f"{ctx.author.mention} ha usado el comando .this!",
+            color=discord.Color.blue(),
+            timestamp=datetime.now()
+        )
+        embed.set_image(url=emote_url)
+        await ctx.send(embed=embed)
+        logger.info(f"Comando .this ejecutado por {ctx.author.name}#{ctx.author.discriminator}")
 
 async def setup(bot: commands.Bot):
     await bot.add_cog(ElvisTimeoutCog(bot))

@@ -3,8 +3,13 @@ from discord import app_commands
 from discord.ext import commands
 from datetime import datetime
 import aiohttp
+import logging
 from typing import Dict, List, Optional
 from dataclasses import dataclass
+
+# Configurar logging para depuración
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
 
 @dataclass
 class ItemLocation:
@@ -23,17 +28,22 @@ class GW2InventorySearch:
         self.headers = {"Authorization": f"Bearer {api_key}"}
 
     async def _fetch(self, endpoint: str, params: Optional[Dict] = None) -> List:
-        """Fetch data from GW2 API with pagination support"""
+        """Fetch data from GW2 API with pagination support and logging"""
         if params is None:
             params = {}
         all_data = []
         params["page"] = 0
         
+        logger.debug(f"Fetching from {self.base_url}{endpoint} with params: {params}")
+        
         async with aiohttp.ClientSession() as session:
             while True:
                 async with session.get(f"{self.base_url}{endpoint}", headers=self.headers, params=params) as resp:
+                    logger.debug(f"Response status for {endpoint}: {resp.status}")
                     if resp.status not in (200, 206):
-                        raise ValueError(f"API error: {resp.status}")
+                        error_msg = f"API error: {resp.status} - {await resp.text()}"
+                        logger.error(error_msg)
+                        raise ValueError(error_msg)
                     data = await resp.json()
                     all_data.extend(data)
                     if "X-Page-Total" not in resp.headers or int(resp.headers["X-Page-Total"]) <= params["page"] + 1:
@@ -42,10 +52,13 @@ class GW2InventorySearch:
         return all_data
 
     async def _get_item_details(self, item_ids: List[int]) -> Dict[int, ItemInfo]:
-        """Fetch item details in chunks"""
+        """Fetch item details in smaller chunks to avoid URI Too Long error"""
+        logger.debug(f"Fetching item details for IDs: {item_ids}")
         items = {}
-        for i in range(0, len(item_ids), 200):
-            chunk = item_ids[i:i + 200]
+        chunk_size = 50  # Reducido de 200 a 50 para evitar error 414
+        for i in range(0, len(item_ids), chunk_size):
+            chunk = item_ids[i:i + chunk_size]
+            logger.debug(f"Processing chunk: {chunk}")
             data = await self._fetch("/items", {"ids": ",".join(map(str, chunk))})
             for item in data:
                 items[item["id"]] = ItemInfo(id=item["id"], name=item["name"])
@@ -117,6 +130,7 @@ class InventorySearchCog(commands.Cog):
                 )
                 await interaction.followup.send(embed=embed)
                 return
+            logger.debug(f"Using API key for user {interaction.user.id}: {api_key[:10]}...")
 
             # Search inventory
             searcher = GW2InventorySearch(api_key)
@@ -131,8 +145,10 @@ class InventorySearchCog(commands.Cog):
             )
 
             if results:
+                total_items = 0  # Total acumulado de todos los ítems
                 for name, counts in results.items():
                     total = counts["Bank"] + counts["Material Storage"]
+                    total_items += total  # Sumar al total global
                     locations_str = []
                     if counts["Bank"] > 0:
                         locations_str.append(f"📦 Banco | {counts['Bank']}")
@@ -143,6 +159,13 @@ class InventorySearchCog(commands.Cog):
                         value="\n".join(locations_str),
                         inline=False
                     )
+                
+                # Añadir el total acumulado al final
+                embed.add_field(
+                    name="Total de ítems",
+                    value=f"{total_items}",
+                    inline=False
+                )
             else:
                 embed.description = f"No se encontró '{search_term}'."
 

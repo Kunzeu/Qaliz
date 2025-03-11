@@ -12,9 +12,10 @@ class TimeoutCog(commands.Cog):
         self.bot = bot
 
     @commands.command(name="to")
-    async def auto_timeout(self, ctx: commands.Context, duration: int = 864000):
+    async def auto_timeout(self, ctx: commands.Context, duration: int = 60):
         """Aplica un auto-timeout al usuario que ejecuta el comando por una duración especificada (en segundos, por defecto 60).
         Uso: .to [duracion]
+        Máximo: 10 minutos (600 segundos).
         """
         member = ctx.author  # El usuario que ejecuta el comando
 
@@ -51,14 +52,14 @@ class TimeoutCog(commands.Cog):
             await ctx.send(embed=embed)
             return
 
-        # Calcular el tiempo de expiración (máximo 28 días según Discord)
-        max_duration = timedelta(days=28)
+        # Calcular el tiempo de expiración (máximo 10 minutos = 600 segundos)
+        max_duration = timedelta(seconds=600)  # 10 minutos
         timeout_duration = timedelta(seconds=duration)
         if timeout_duration > max_duration:
             timeout_duration = max_duration
             embed_warning = discord.Embed(
                 title="⚠️ Advertencia",
-                description=f"La duración fue limitada a 28 días (máximo permitido por Discord).",
+                description=f"La duración fue limitada a 10 minutos (máximo permitido).",
                 color=discord.Color.yellow(),
                 timestamp=datetime.now()
             )

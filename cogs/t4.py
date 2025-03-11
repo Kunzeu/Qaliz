@@ -71,7 +71,7 @@ class T4(commands.Cog):
             )
             embed.add_field(
                 name="<:bag:1328509159682867231> Price per Stack (250)",
-                value=f"<:TP:1328507535245836439> 100%: {calculate_coins(total_sell_price)}\n<:TP:1327458255068332043> 90%: {calculate_coins(int(total_price_90))}",
+                value=f"<:TP:1328507535245836439> 100%: {calculate_coins(total_sell_price)}\n<:TP:1328507535245836439> 90%: {calculate_coins(int(total_price_90))}",
                 inline=False
             )
             embed.add_field(

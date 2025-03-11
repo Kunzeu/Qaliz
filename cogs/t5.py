@@ -65,13 +65,13 @@ class T5Calculator(commands.Cog):
             embed.set_thumbnail(url=T5_GIF_URL)
 
             embed.add_field(
-                name="<:Mystic_Forge:1327458125044781137> Requested Amount",
+                name="<:Mystic_Forge:1328509105551183953> Requested Amount",
                 value=f"{stack_size} units",
                 inline=False
             )
             embed.add_field(
                 name="<:bag:1328509159682867231> Price per Stack (250)",
-                value=f"<:TP:1328507535245836439> 100%: {calculate_coins(total_sell_price)}\n<:TP:1327458255068332043> 90%: {calculate_coins(int(total_price_90))}",
+                value=f"<:TP:1328507535245836439> 100%: {calculate_coins(total_sell_price)}\n<:TP:1328507535245836439> 90%: {calculate_coins(int(total_price_90))}",
                 inline=False
             )
             embed.add_field(

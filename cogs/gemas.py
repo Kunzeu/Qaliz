@@ -74,13 +74,6 @@ class GW2Gemas(commands.Cog):
                 inline=False
             )
 
-            # Añadimos el enlace
-            embed.add_field(
-                name="Comprar Gemas mas baratas",
-                value="[AQUI](https://instant-gaming.com/es/busquedas/?q=Guild%20Wars%202&igr=Vortus)",
-                inline=False
-            )
-
             # Enviar respuesta
             await interaction.response.send_message(embed=embed)
 

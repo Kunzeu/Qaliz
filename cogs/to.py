@@ -56,14 +56,7 @@ class TimeoutCog(commands.Cog):
         max_duration = timedelta(seconds=600)  # 10 minutos
         timeout_duration = timedelta(seconds=duration)
         if timeout_duration > max_duration:
-            timeout_duration = max_duration
-            embed_warning = discord.Embed(
-                title="⚠️ Advertencia",
-                description=f"La duración fue limitada a 10 minutos (máximo permitido).",
-                color=discord.Color.yellow(),
-                timestamp=datetime.now()
-            )
-            await ctx.send(embed=embed_warning)
+            timeout_duration = max_duration  # Limitar silenciosamente a 10 minutos
 
         # Aplicar el auto-timeout
         try:
@@ -75,7 +68,7 @@ class TimeoutCog(commands.Cog):
                 timestamp=datetime.now()
             )
             await ctx.send(embed=embed)
-            logger.info(f"Auto-timeout aplicado a {member.name}#{member.discriminator} por {duration} segundos")
+            logger.info(f"Auto-timeout aplicado a {member.name}#{member.discriminator} por {duration} segundos (limitado a 600s si excede)")
         except discord.Forbidden:
             embed = discord.Embed(
                 title="❌ Sin Permisos",

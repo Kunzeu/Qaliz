@@ -57,16 +57,38 @@ class Reminders(commands.Cog):
             
             for reminder_data in reminders_data:
                 try:
+                    # Validar campos requeridos
+                    required_fields = ['user_id', 'channel_id', 'message', 'time']
+                    missing_fields = [field for field in required_fields if field not in reminder_data]
+                    if missing_fields:
+                        print(f"❌ Datos incompletos en recordatorio: Faltan los campos {missing_fields}. Datos: {reminder_data}")
+                        continue
+
+                    # Usar las IDs como cadenas directamente desde la base de datos
+                    user_id = reminder_data['user_id']  # Destinatario del recordatorio
+                    channel_id = reminder_data['channel_id']
+                    message = reminder_data['message']
+                    time_str = reminder_data['time']
+
+                    # Validar y convertir la fecha
+                    try:
+                        reminder_time = datetime.datetime.fromisoformat(time_str)
+                    except (ValueError, TypeError) as e:
+                        print(f"❌ Error en formato de fecha: time={time_str}. Error: {e}")
+                        continue
+
+                    # Procesar el recordatorio
                     self.reminders.append({
-                        'user_id': int(reminder_data['user_id']),
-                        'channel_id': int(reminder_data['channel_id']),
-                        'target_id': int(reminder_data.get('target_id')) if reminder_data.get('target_id') else None,
-                        'message': reminder_data['message'],
-                        'time': datetime.datetime.fromisoformat(reminder_data['time']),
+                        'user_id': user_id,  # Destinatario
+                        'creator_id': reminder_data.get('creator_id', user_id),  # Quién lo creó
+                        'channel_id': channel_id,
+                        'target_id': reminder_data.get('target_id'),  # Puede ser None
+                        'message': message,
+                        'time': reminder_time,
                         'original_message': reminder_data.get('original_message', '')
                     })
-                except (ValueError, KeyError) as e:
-                    print(f"❌ Error procesando datos del recordatorio: {e}")
+                except Exception as e:
+                    print(f"❌ Error procesando datos del recordatorio: {e}. Datos: {reminder_data}")
                     continue
                     
             print(f"✅ Cargados {len(self.reminders)} recordatorios exitosamente")
@@ -77,7 +99,8 @@ class Reminders(commands.Cog):
     async def save_reminder(self, reminder):
         try:
             reminder_data = {
-                'user_id': str(reminder['user_id']),
+                'user_id': str(reminder['user_id']),  # Destinatario
+                'creator_id': str(reminder.get('creator_id', reminder['user_id'])),  # Quién lo creó
                 'channel_id': str(reminder['channel_id']),
                 'target_id': str(reminder['target_id']) if reminder.get('target_id') else None,
                 'message': reminder['message'],
@@ -104,7 +127,7 @@ class Reminders(commands.Cog):
 
         for reminder in self.reminders:
             if reminder['time'] <= now:
-                user = self.bot.get_user(reminder['user_id'])
+                user = self.bot.get_user(int(reminder['user_id']))  # Enviar al destinatario
                 if user:
                     embed = discord.Embed(
                         title="Reminder",
@@ -122,7 +145,7 @@ class Reminders(commands.Cog):
                     )
                     embed.add_field(
                         name="By",
-                        value=f"<@{reminder['user_id']}>",
+                        value=f"<@{reminder['creator_id']}>",  # Mostrar quién lo creó
                         inline=False
                     )
                     try:
@@ -142,10 +165,15 @@ class Reminders(commands.Cog):
             target_id, channel_id, message, time_delta = await self.parse_remind_command(ctx, content)
             reminder_time = datetime.datetime.now() + time_delta
 
+            # Si se usa meorother, user_id será el target_id; de lo contrario, el autor
+            user_id = target_id if 'meorother' in ctx.message.content and target_id else str(ctx.author.id)
+            creator_id = str(ctx.author.id)  # Quién creó el recordatorio
+
             reminder = {
-                'user_id': ctx.author.id,
-                'channel_id': channel_id,
-                'target_id': target_id,
+                'user_id': user_id,  # Destinatario
+                'creator_id': creator_id,  # Quién lo creó
+                'channel_id': str(channel_id),
+                'target_id': target_id,  # Puede ser None o el ID mencionado
                 'message': message,
                 'time': reminder_time,
                 'original_message': f"Establecido el {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
@@ -178,7 +206,7 @@ class Reminders(commands.Cog):
     @commands.command(name='reminders', aliases=['listreminders', 'myreminders'])
     async def list_reminders(self, ctx):
         """Muestra todos tus recordatorios activos"""
-        user_reminders = [r for r in self.reminders if r['user_id'] == ctx.author.id]
+        user_reminders = [r for r in self.reminders if r['user_id'] == str(ctx.author.id)]  # Solo los del autor
         
         if not user_reminders:
             await ctx.send("No tienes recordatorios activos.")
@@ -196,7 +224,7 @@ class Reminders(commands.Cog):
             minutes, seconds = divmod(remainder, 60)
             time_str = f"{hours}h {minutes}m {seconds}s"
             
-            channel = self.bot.get_channel(reminder['channel_id'])
+            channel = self.bot.get_channel(int(reminder['channel_id']))
             channel_str = channel.mention if channel else "Canal desconocido"
 
             embed.add_field(
@@ -213,7 +241,7 @@ class Reminders(commands.Cog):
     @commands.command(name='removereminder', aliases=['remove', 'delreminder'])
     async def remove_reminder(self, ctx, index: int):
         """Elimina un recordatorio específico por su número"""
-        user_reminders = [r for r in self.reminders if r['user_id'] == ctx.author.id]
+        user_reminders = [r for r in self.reminders if r['user_id'] == str(ctx.author.id)]  # Solo los del autor
         
         if not user_reminders or index > len(user_reminders) or index < 1:
             await ctx.send("❌ Índice de recordatorio inválido.")
@@ -231,7 +259,7 @@ class Reminders(commands.Cog):
     @commands.command(name='removeall', aliases=['clearreminders'])
     async def remove_all_reminders(self, ctx):
         """Elimina todos tus recordatorios activos"""
-        user_reminders = [r for r in self.reminders if r['user_id'] == ctx.author.id]
+        user_reminders = [r for r in self.reminders if r['user_id'] == str(ctx.author.id)]  # Solo los del autor
 
         if not user_reminders:
             await ctx.send("No tienes recordatorios activos para eliminar.")
@@ -248,20 +276,20 @@ class Reminders(commands.Cog):
         else:
             await ctx.send("⚠️ Algunos recordatorios no pudieron ser eliminados completamente.")
 
-    async def parse_remind_command(self, ctx, content: str) -> Tuple[Optional[int], Optional[int], str, datetime.timedelta]:
+    async def parse_remind_command(self, ctx, content: str) -> Tuple[Optional[str], Optional[str], str, datetime.timedelta]:
         content = content.strip()
         target_id = None
         channel_id = None
         
         if content.startswith('me '):
-            target_id = ctx.author.id
+            target_id = str(ctx.author.id)  # Cadena
             content = content[3:]
         elif content.startswith('meorother '):
             content = content[10:]
 
         channel_match = re.match(r'^<#(\d+)>\s+(.+)$', content)
         if channel_match:
-            channel_id = int(channel_match.group(1))
+            channel_id = channel_match.group(1)  # Cadena
             content = channel_match.group(2)
 
         words = content.split()
@@ -279,14 +307,14 @@ class Reminders(commands.Cog):
             raise ValueError("Formato de tiempo inválido")
 
         if not channel_id:
-            channel_id = ctx.channel.id
+            channel_id = str(ctx.channel.id)  # Cadena
 
         if target_id is None and 'meorother' in ctx.message.content:
             user_mention_match = re.search(r'<@!?(\d+)>', message)
             if user_mention_match:
-                target_id = int(user_mention_match.group(1))
+                target_id = user_mention_match.group(1)  # Cadena
             else:
-                target_id = ctx.author.id
+                target_id = str(ctx.author.id)  # Si no hay mención, se lo recuerda a sí mismo
 
         return target_id, channel_id, message, time_delta
 

@@ -14,7 +14,7 @@ Este es un bot de Discord desarrollado con `discord.py`, diseñado para jugadore
 - **`/apikey add/remove/check`**: Gestiona tu API key de GW2 con permisos "account", "inventories", y "tradingpost".
 - **`/hora`**: Muestra la hora actual en el servidor.
 - **`/inventory <search>`**: Busca ítems en banco y almacenamiento de materiales de GW2 con paginación (`page`, `page_size`) y manejo de errores.
-- **`.to [duración]`**: Permite a los usuarios aplicarse un auto-timeout (por defecto 60 segundos, máximo 28 días) con validaciones.
+- **`.to [duración]`**: Permite a los usuarios aplicarse un auto-timeout (por defecto 60 segundos, máximo 10 minutos) con validaciones.
 - **Sistema de Comandos Personalizados (`CommandManager`)**:
   - Crea, edita, elimina comandos con categorías, aliases y soporte futuro para acciones (ej. ban).
 - **Gestión de Roles**: Configura roles de admin y mod con `.configurar_roles`, persistiendo en Firestore.

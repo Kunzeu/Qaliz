@@ -53,15 +53,15 @@ class ElvisTimeoutCog(commands.Cog):
 
         # Aplicar el timeout (5 minutos = 300 segundos)
         try:
-            await target.timeout(timedelta(seconds=300), reason=f"Timeout aplicado por {ctx.author} con comando .elvis")
+            await target.timeout(timedelta(seconds=10), reason=f"Timeout aplicado por {ctx.author} con comando .elvis")
             embed = discord.Embed(
                 title="⏰ Timeout Aplicado",
-                description=f"{target.mention} ha sido silenciado por 5 minutos con el comando .elvis.",
+                description=f"{target.mention} ha sido silenciado por 10 segundos con el comando .elvis.",
                 color=discord.Color.green(),
                 timestamp=datetime.now()
             )
             await ctx.send(embed=embed)
-            logger.info(f"Timeout aplicado a {target.name}#{target.discriminator} por 5 minutos por {ctx.author.name}#{ctx.author.discriminator}")
+            logger.info(f"Timeout aplicado a {target.name}#{target.discriminator} por 10 segundos por {ctx.author.name}#{ctx.author.discriminator}")
         except discord.Forbidden:
             embed = discord.Embed(
                 title="❌ Sin Permisos",

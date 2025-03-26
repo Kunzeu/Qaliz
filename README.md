@@ -1,48 +1,48 @@
 # Discord Bot - Moodle
 
-Este es un bot de Discord desarrollado con `discord.py`, diseñado para jugadores de *Guild Wars 2* y administradores de servidores. Integra la API de *Guild Wars 2* (v2) para proporcionar precios en tiempo real, herramientas de moderación y un sistema de comandos personalizados.  
+This is a Discord bot developed with `discord.py`, designed for *Guild Wars 2* players and server administrators. It integrates the *Guild Wars 2* (v2) API to provide real-time pricing, moderation tools and a custom command system.  
 
-## Características
+## Features
 
-### Funcionalidades Originales (Guild Wars 2)
-- **`/item <búsqueda>`**: Muestra precios actuales de ítems (ej. Ectos, precursorys) usando la API de GW2.
-- **`/clovers`**: Calcula el precio actual de Mystic Clovers basado en materiales y mercado.
-- **`/delivery`**: Revisa el contenido de tu Trading Post delivery box (requiere API key).
-- **`/t3`, `/t4`, `/t5`, `/t6`**: Muestra precios de materiales T3 a T6.
-- **`/materials`**: Muestra precios de Gift of Condensed Magic y Gift of Condensed Might.
-- **`/gift`**: Precio fijo de GOMS (Gift of Magic), GOJMS (Gift of Jewelry Magic), y GOJW (Gift of Jade Weapon).
-- **`/apikey add/remove/check`**: Gestiona tu API key de GW2 con permisos "account", "inventories", y "tradingpost".
-- **`/hora`**: Muestra la hora actual en el servidor.
-- **`/inventory <search>`**: Busca ítems en banco y almacenamiento de materiales de GW2 con paginación (`page`, `page_size`) y manejo de errores.
-- **`.to [duración]`**: Permite a los usuarios aplicarse un auto-timeout (por defecto 60 segundos, máximo 10 minutos) con validaciones.
-- **Sistema de Comandos Personalizados (`CommandManager`)**:
-  - Crea, edita, elimina comandos con categorías, aliases y soporte futuro para acciones (ej. ban).
-- **Gestión de Roles**: Configura roles de admin y mod con `.configurar_roles`, persistiendo en Firestore.
+### Original Features (Guild Wars 2)
+- **`/item <search>`**: Displays current item prices (e.g. Ectos, precursorys) using the GW2 API.
+- **`/clovers`**: Calculates the current price of Mystic Clovers based on materials and market.
+- **`/delivery`**: Check the content of your Trading Post delivery box (requires API key).
+- **`/t3`, `/t4`, `/t5`, `/t6`**: Displays T3 to T6 material prices.
+- **`/materials`**: Shows Gift of Condensed Magic and Gift of Condensed Might prices.
+- **`/gift`**: Fixed price of GOMS (Gift of Magic), GOJMS (Gift of Jewelry Magic), and GOJW (Gift of Jade Weapon).
+- **`/apikey add/remove/check`**: Manage your GW2 API key with “account”, “inventories”, and “tradingpost” permissions.
+- **`/time`**: Displays the current time on the server.
+- **`/inventory <search>`**: Search for items in GW2 material bank and storage with pagination (`page`, `page_size`) and error handling.
+- **`.to [duration]`**: Allows users to apply an auto-timeout (default 60 seconds, maximum 10 minutes) with validations.
+- **Custom Command System (`CommandManager`)**:
+  - crear (cmd), editar, eliminar commands with categories, alias and future support for actions (e.g. ban).
+- Role Management**: Configure admin and mod roles with `.configure_roles`, persisting in Firestore.
 
-## Requisitos
+## Requirements
 
-- **Python**: Versión 3.8 o superior.
-- **Bibliotecas**:
-  - `discord.py==2.3.2` (para comandos slash y eventos)
-  - `aiohttp==3.8.6` (para solicitudes asíncronas a APIs)
-  - `google-cloud-firestore==2.13.1` (para integración con Firestore)
-  - `python-dotenv==1.0.0` (para variables de entorno)
-- **Credenciales**:
-  - Token de bot de Discord (obténlo en [Discord Developer Portal](https://discord.com/developers/applications)).
-  - Archivo JSON de credenciales de Firestore (descarga desde Google Cloud).
-  - API key de Guild Wars 2 (opcional, obténla en [account.arena.net](https://account.arena.net/applications)).
+- Python**: Version 3.8 or higher.
+- **Libraries**:
+  - `discord.py==2.3.2` (for slash commands and events).
+  - aiohttp==3.8.6` (for asynchronous requests to APIs)
+  - google-cloud-firestore==2.13.1` (for Firestore integration)
+  - `python-dotenv==1.0.0` (for environment variables)
+- Credentials:
+  - Discord bot token (get it from [Discord Developer Portal](https://discord.com/developers/applications)).
+  - Firestore credentials JSON file (download from Google Cloud).
+  - Guild Wars 2 API key (optional, get it from [account.arena.net](https://account.arena.net/applications)).
 
-## Instalación
+## Installation
 
-1. **Clona el Repositorio**:
-   ```bash
+1. **Clone the Repository**:
+   ````bash
    git clone https://github.com/Kunzeu/Moodle.git
    cd Moodle
-2. Instala las dependencias necesarias usando `pip install -r requirements.txt`.
-3. Obtén una clave API de Guild Wars 2 en (https://wiki.guildwars2.com/wiki/API:2) o directamente en el código (asegúrate de mantenerla segura).
-4. Ejecuta el bot usando `python index.py`.
+2. Install the required dependencies using ``pip install -r requirements.txt`.
+3. Get a Guild Wars 2 API key from (https://wiki.guildwars2.com/wiki/API:2) or directly in the code (be sure to keep it safe).
+4. Run the bot using `python index.py`.
 
 
-2 ## Contact
+## Contact
 
-Puedes contactar conmigo en Discord: [Kunzeu](https://discord.com/users/552563672162107431)
+You can contact me on Discord: [Kunzeu](https://discord.com/users/552563672162107431)

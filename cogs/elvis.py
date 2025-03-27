@@ -2,6 +2,7 @@ import discord
 from discord.ext import commands
 from datetime import datetime, timedelta
 import logging
+import random
 
 # Configurar logging
 logging.basicConfig(level=logging.INFO)
@@ -13,10 +14,10 @@ class ElvisTimeoutCog(commands.Cog):
 
     @commands.command(name='elvis')
     async def elvis_timeout(self, ctx):
-        """Aplica un timeout de 5 minutos al usuario con ID {id}.
+        """Aplica un timeout de duración aleatoria (entre 1 y 100 segundos) al usuario con ID 291770893816954881.
         Uso: .elvis
         """
-        target_id = 291770893816954881
+        target_id = 479754146619195393
         target = ctx.guild.get_member(target_id)
 
         # Verificar que el bot tenga permisos para moderar miembros
@@ -51,17 +52,21 @@ class ElvisTimeoutCog(commands.Cog):
             await ctx.send(embed=embed)
             return
 
-        # Aplicar el timeout (5 minutos = 300 segundos)
+        # Generar un tiempo aleatorio entre 1 y 100 segundos
+        timeout_seconds = random.randint(1, 100)
+        timeout_duration = timedelta(seconds=timeout_seconds)
+
+        # Aplicar el timeout
         try:
-            await target.timeout(timedelta(seconds=20), reason=f"Timeout aplicado por {ctx.author} con comando")
+            await target.timeout(timeout_duration, reason=f"Timeout aleatorio aplicado por {ctx.author} con comando .elvis")
             embed = discord.Embed(
                 title="⏰ Timeout Aplicado",
-                description=f"{target.mention} ha sido silenciado por 20 segundo.",
+                description=f"{target.mention} ha sido silenciado por {timeout_seconds} segundos con el comando .elvis.",
                 color=discord.Color.green(),
                 timestamp=datetime.now()
             )
             await ctx.send(embed=embed)
-            logger.info(f"Timeout aplicado a {target.name}#{target.discriminator} por 20 segundos por {ctx.author.name}#{ctx.author.discriminator}")
+            logger.info(f"Timeout aplicado a {target.name}#{target.discriminator} por {timeout_seconds} segundos por {ctx.author.name}#{ctx.author.discriminator}")
         except discord.Forbidden:
             embed = discord.Embed(
                 title="❌ Sin Permisos",

@@ -17,7 +17,7 @@ class ElvisTimeoutCog(commands.Cog):
         """Aplica un timeout de duración aleatoria (entre 1 y 100 segundos) al usuario con ID 291770893816954881.
         Uso: .elvis
         """
-        target_id = 479754146619195393
+        target_id = 291770893816954881
         target = ctx.guild.get_member(target_id)
 
         # Verificar que el bot tenga permisos para moderar miembros
@@ -58,10 +58,10 @@ class ElvisTimeoutCog(commands.Cog):
 
         # Aplicar el timeout
         try:
-            await target.timeout(timeout_duration, reason=f"Timeout aleatorio aplicado por {ctx.author} con comando .elvis")
+            await target.timeout(timeout_duration, reason=f"Timeout aleatorio aplicado por {ctx.author}")
             embed = discord.Embed(
                 title="⏰ Timeout Aplicado",
-                description=f"{target.mention} ha sido silenciado por {timeout_seconds} segundos con el comando .elvis.",
+                description=f"{target.mention} ha sido silenciado por {timeout_seconds} segundos.",
                 color=discord.Color.green(),
                 timestamp=datetime.now()
             )
@@ -102,4 +102,4 @@ class ElvisTimeoutCog(commands.Cog):
         logger.info(f"Comando .this ejecutado por {ctx.author.name}#{ctx.author.discriminator}")
 
 async def setup(bot: commands.Bot):
-    await bot.add_cog(ElvisTimeoutCog(bot))
+    await bot.add_cog(ElvisTimeoutCog(bot)) 

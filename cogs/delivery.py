@@ -19,17 +19,22 @@ class Delivery(commands.Cog):
         description="Displays Trading Post delivery details"
     )
     async def delivery(self, interaction: discord.Interaction):
-        await interaction.response.defer()
+        # Deferir la respuesta inmediatamente para evitar el timeout
+        await interaction.response.defer(ephemeral=False)  # Cambiado a False para que el embed sea visible para todos
+        
         user_id = str(interaction.user.id)
         
         try:
             api_key = await dbManager.getApiKey(user_id)
             
             if not api_key:
-                return await interaction.followup.send(
-                    content="⚠️ You don't have a linked API key. Use `/apikey` to link your Guild Wars 2 API key.",
-                    ephemeral=True
+                embed = discord.Embed(
+                    title="⚠️ No API Key",
+                    description="You don't have a linked API key. Use `/apikey add` to link your Guild Wars 2 API key.",
+                    color=discord.Color.yellow(),
+                    timestamp=datetime.now()
                 )
+                return await interaction.followup.send(embed=embed)
             
             delivery_details = await self.get_delivery_details(api_key)
             embed = await self.format_delivery_details_embed(delivery_details, interaction.user)
@@ -37,17 +42,19 @@ class Delivery(commands.Cog):
             
         except Exception as error:
             print(f'Error in delivery command: {error}')
+            embed = discord.Embed(
+                title="❌ Error",
+                color=discord.Color.red(),
+                timestamp=datetime.now()
+            )
             
             if str(error) == 'Invalid API key':
-                await interaction.followup.send(
-                    content="❌ Your API key is invalid or has expired. Please update it using `/apikey`.",
-                    ephemeral=True
-                )
+                embed.description = "Your API key is invalid or has expired. Please update it using `/apikey add`."
             else:
-                await interaction.followup.send(
-                    content="❌ An error occurred while processing your request.",
-                    ephemeral=True
-                )
+                embed.description = "An error occurred while processing your request."
+                embed.add_field(name="Error Details", value=f"```{str(error)}```", inline=False)
+            
+            await interaction.followup.send(embed=embed)
     
     async def get_delivery_details(self, api_key: str) -> Dict:
         """Obtiene los detalles de entrega del Trading Post"""
@@ -59,6 +66,8 @@ class Delivery(commands.Cog):
                 ) as response:
                     if response.status == 401:
                         raise Exception('Invalid API key')
+                    if response.status != 200:
+                        raise Exception(f"API returned status {response.status}")
                     return await response.json()
             except Exception as error:
                 print(f'Error fetching delivery details: {error}')
@@ -71,6 +80,8 @@ class Delivery(commands.Cog):
                 async with session.get(
                     f'https://api.guildwars2.com/v2/items/{item_id}?lang=en'
                 ) as response:
+                    if response.status != 200:
+                        raise Exception(f"API returned status {response.status}")
                     return await response.json()
             except Exception as error:
                 print(f'Error fetching item {item_id}: {error}')
@@ -111,7 +122,7 @@ class Delivery(commands.Cog):
         
         # Campo de monedas
         coins_value = (
-            f"{gold} <:gold:1328507096324374699>"
+            f"{gold} <:gold:1328507096324374699> "
             f"{silver} <:silver:1328507117748879422> "
             f"{copper} <:Copper:1328507127857418250>"
         ) if details['coins'] > 0 else 'No coins to collect'

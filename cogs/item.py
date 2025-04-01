@@ -194,7 +194,7 @@ ITEMS_MAP = {
     24277: {"mainName": "Pile of Crystalline Dust", "altNames": ["Dust"]},
     68063: {"mainName": "Amalgamated Gemstone", "altNames": ["Gem", "amalgamada"]},
     19976: {"mainName": "Mystic Coin", "altNames": ["MC", "mc", "Monedas Misticas"]},
-    89271: {"mainName": "Pile of Lucent Crystal", "altNames": ["Lucent"]},
+    89271: {"mainName": "Pile of Lucent Crystal", "altNames": ["Lucent", "Montón de cristal luminoso", "Montón"]},
     24294: {"mainName": "Vial of Potent Blood", "altNames": ["Vial de sangre potente", "potente"]},
     24341: {"mainName": "Large Bone", "altNames": ["Hueso", "Hueso grande"]},
     24350: {"mainName": "Large Claw", "altNames": ["Garra grande"]},
@@ -217,6 +217,7 @@ ITEMS_MAP = {
     19737: {"mainName": "Cured Hardened Leather Square", "altNames": ["Retal", "Retal de cuero curado endurecido"]},
     93241: {"mainName": "Chatoyant Elixir", "altNames": ["Elixir de ágata", "agata", "Chatoyant" "Elixir"]},
     24467: {"mainName": "Tiger's Eye Pebble", "altNames": ["Guijarro de ojo de tigre", "Guijarro", "tigre"]},
+    89140: {"mainName": "Lucent Mote", "altNames": ["Mote", "Mota luminosa"]},
 
     # ... (rest of the item mappings) ...
 }

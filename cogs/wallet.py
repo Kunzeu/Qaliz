@@ -34,12 +34,6 @@ class WalletCog(commands.Cog):
             } for currency in currencies_data}
 
             print(f"✅ Cargadas {len(self.currency_map)} monedas de GW2")
-            print("📌 Íconos de monedas de GW2 para subir como emojis:")
-            
-            # Ordenar por ID para una presentación más clara
-            for currency_id in sorted(self.currency_map.keys()):
-                data = self.currency_map[currency_id]
-                print(f"ID: {currency_id} | Nombre: {data['name']} | URL del ícono: {data['icon']}")
                 
         except Exception as e:
             print(f"❌ Error al cargar los datos de las monedas: {str(e)}")
@@ -121,12 +115,12 @@ class WalletCog(commands.Cog):
                 "Principales": [1, 2, 3, 4, 23, 24, 63, 68],  # Monedas principales
                 "Magia Especial": [45, 32],  
                 "Tokens": [5, 29, 50, 59], 
-                "Monedas de Mapa": [15, 19, 20, 22, 29],
+                "Monedas de Mapa": [19, 20, 22],
                 "End of Dragons": [61],
                 "Secrets of the Obscure": [66, 73, 74],
-                "Janthir Wilds": [62],
+                "Janthir Wilds": [62, 76],
                 "Incursiones": [28, 70],
-                "Competición": [26, 30, 33]
+                "Competición": [15, 26, 30, 33]
                 
             }
 
@@ -166,7 +160,21 @@ class WalletCog(commands.Cog):
                 70: "<:LegendaryInsight:1356712898252243135>",
                 73: "<:PinchofStardust:1356723379989909514>",
                 75: "<:CalcifiedGasp:1356723611926532107>",
+                76: "<:UrsusOblige:1356826426157961233>"
                 # Agrega más emotes aquí cuando los tengas disponibles
+            }
+            
+            # Iconos personalizados para cada categoría
+            category_icons = {
+                "Principales": "<:gold:1328507096324374699>",
+                "Magia Especial": "<:VolatileMagic:1356710184096891141>",
+                "Tokens": "<:Faction_Provisioner:1356835217494642802>",
+                "Monedas de Mapa": "<:Chest_event_gold_open:1356835952873439294>",
+                "End of Dragons": "<:EoD:1356832396154241114>",
+                "Secrets of the Obscure": "<:SotO:1356832406169976994>",
+                "Janthir Wilds": "<:JanthirWilds:1356826107365818458>",
+                "Incursiones": "<:Raid:1356834513371533342>",
+                "Competición": "<:Arena_Proprietor:1356834807564472440>"
             }
 
             embed = discord.Embed(
@@ -224,7 +232,7 @@ class WalletCog(commands.Cog):
                         silver = (amount % 10000) // 100
                         copper = amount % 100
                         category_text += (
-                            f"💰 **{currency_name}**: "
+                            f"**{currency_name}**: "
                             f"{gold}{gold_emoji} {silver}{silver_emoji} {copper}{copper_emoji}\n"
                         )
                     else:
@@ -232,13 +240,9 @@ class WalletCog(commands.Cog):
 
                 # Agregamos el campo solo si tiene contenido
                 if category_text:
-                    # Casos especiales para algunas categorías
-                    if category_name == "Tokens":
-                        title = "🏆 Tokens"
-                    elif category_name == "Magia":
-                        title = " Magia"
-                    else:
-                        title = f"<:Inventory:1356724741133828116> {category_name}"
+                    # Obtener el icono de la categoría desde el nuevo mapeo
+                    category_icon = category_icons.get(category_name, "<:Inventory:1356724741133828116>")
+                    title = f"{category_icon} {category_name}"
                     
                     embed.add_field(name=title, value=category_text, inline=False)
 

@@ -1,88 +1,61 @@
 import discord
 from discord.ext import commands
 
-class GW2Commands(commands.Cog):
-    def __init__(self, bot: commands.Bot):
-        self.bot = bot
-
-    @commands.command(name="t3")
-    async def t3(self, ctx):
-        """Información sobre el precio del item T3."""
-        await ctx.send("Comando para obtener el precio del item T3.")
-
-    @commands.command(name="t4")
-    async def t4(self, ctx):
-        """Información sobre el precio del item T4."""
-        await ctx.send("Comando para obtener el precio del item T4.")
-
-    @commands.command(name="t5")
-    async def t5(self, ctx):
-        """Información sobre el precio del item T5."""
-        await ctx.send("Comando para obtener el precio del item T5.")
-
-    @commands.command(name="t6")
-    async def t6(self, ctx):
-        """Información sobre el precio del item T6."""
-        await ctx.send("Comando para obtener el precio del item T6.")
-
-    @commands.command(name="might")
-    async def might(self, ctx):
-        """Información sobre el precio de los items con el modificador Might."""
-        await ctx.send("Comando para obtener el precio del item con Might.")
-        
-    @commands.command(name="magic")
-    async def magic(self, ctx):
-        """Información sobre el precio de los items con el modificador Might."""
-        await ctx.send("Comando para obtener el precio del item con Magic.")
-
-
 class CustomHelpCommand(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
+        bot.help_command = None
 
     @commands.command(name="help")
     async def help(self, ctx, command_name: str = None):
-        """Muestra la lista de comandos organizados, o la descripción de un comando específico."""
-        if command_name:  # Si el nombre del comando es proporcionado
-            # Buscar el comando por su nombre
+        """Muestra la lista de comandos de texto y de aplicación, o la descripción de un comando específico."""
+        embed = discord.Embed(
+            title="📋 Comandos Disponibles",
+            color=discord.Color.purple(),
+            description="Usa `.help <comando>` para más detalles sobre cada comando de texto.\nLos comandos de aplicación (/) se listan por categoría."
+        )
+
+        if command_name:
             command = self.bot.get_command(command_name)
             if command:
-                # Crear un embed con la descripción del comando
-                embed = discord.Embed(
-                    title=f"Comando: {command.name}",
-                    description=command.help or "No hay descripción disponible para este comando.",
-                    color=discord.Color.purple()
-                )
+                embed.title = f"Comando de Texto: {command.name}"
+                embed.description = command.help or "No hay descripción disponible para este comando."
                 await ctx.send(embed=embed)
+                return
             else:
-                # Si no se encuentra el comando
+                for app_command in self.bot.tree.get_commands():
+                    if app_command.name == command_name:
+                        embed.title = f"Comando de Aplicación: /{app_command.name}"
+                        embed.description = app_command.description or "No hay descripción disponible."
+                        await ctx.send(embed=embed)
+                        return
                 await ctx.send(f"No se encontró un comando llamado `{command_name}`.")
-        else:
-            # Si no se proporciona el nombre del comando, mostrar todos los comandos
-            embed = discord.Embed(
-                title="Comandos Disponibles",
-                description="Usa `.help <comando>` para más detalles sobre cada comando.",
-                color=discord.Color.purple()
-            )
+            return
 
-            # Lista de comandos organizados por categorías
-            for cog_name, cog in self.bot.cogs.items():
-                # Ignorar "No Category" y la categoría de CustomHelpCommand
-                if cog_name == "No Category" or cog_name == "CustomHelpCommand":
-                    continue
+        categories_to_ignore = ['No Category', 'CustomHelpCommand', 'SyncCog', 'TimeoutCog', 'ElvisTimeoutCog']
+        for cog_name, cog in self.bot.cogs.items():
+            if cog_name in categories_to_ignore:
+                continue
 
-                # Obtener los comandos de la categoría
-                commands_list = cog.get_commands()
-                if commands_list:
-                    # Crear una lista con los nombres de los comandos
-                    command_names = ", ".join([f"`{cmd.name}`" for cmd in commands_list])
-                    embed.add_field(name=f"**{cog_name}**", value=command_names, inline=False)
+            commands_list = cog.get_commands()
+            if commands_list:
+                command_names = ", ".join([f"`{cmd.name}`" for cmd in commands_list])
+                embed.add_field(name=f"**{cog_name} (Comandos de Texto)**", value=command_names, inline=False)
 
-            # Enviar el embed con la lista compacta
-            await ctx.send(embed=embed)
+        # Listar comandos de aplicación por cog (esto puede necesitar ajustes)
+        app_commands_by_cog = {}
+        for cmd in self.bot.tree.get_commands():
+            cog_name = cmd.module.split('.')[-1] if cmd.module else "Global Commands" # Inferir nombre del cog
+            if cog_name not in categories_to_ignore:
+                if cog_name not in app_commands_by_cog:
+                    app_commands_by_cog[cog_name] = []
+                app_commands_by_cog[cog_name].append(f"`/{cmd.name}`")
 
+        if app_commands_by_cog:
+            embed.add_field(name="**Gw2**", value=", ".join(sorted(cmd for sublist in app_commands_by_cog.values() for cmd in sublist)), inline=False)
+            # No necesitas el bucle interno para agregar campos individuales por cog aquí si quieres una lista plana
+
+        await ctx.send(embed=embed)
 
 async def setup(bot: commands.Bot):
-    # Cargar las extensiones
-    await bot.add_cog(GW2Commands(bot))
     await bot.add_cog(CustomHelpCommand(bot))

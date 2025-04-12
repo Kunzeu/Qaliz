@@ -32,7 +32,7 @@ class CustomHelpCommand(commands.Cog):
                 await ctx.send(f"No se encontró un comando llamado `{command_name}`.")
             return
 
-        categories_to_ignore = ['No Category', 'CustomHelpCommand', 'SyncCog', 'TimeoutCog', 'ElvisTimeoutCog']
+        categories_to_ignore = ['No Category', 'CustomHelpCommand', 'SyncCog', 'TimeoutCog', 'ElvisTimeoutCog', 'Reception']
         for cog_name, cog in self.bot.cogs.items():
             if cog_name in categories_to_ignore:
                 continue

@@ -112,9 +112,9 @@ class WalletCog(commands.Cog):
 
             # Mapeo de IDs de monedas a categorías (actualizado)
             categories = {
-                "Principales": [1, 2, 3, 4, 7, 23, 24, 63, 68],  # Monedas principales
+                "Principales": [1, 2, 3, 4, 23, 24, 63, 68],  # Monedas principales
                 "Magia Especial": [45, 32],  
-                "Tokens": [5, 29, 50, 59], 
+                "Tokens": [29, 50, 59, 69], 
                 "Monedas de Mapa": [19, 20, 22],
                 "End of Dragons": [61],
                 "Secrets of the Obscure": [66, 73, 74],
@@ -135,8 +135,6 @@ class WalletCog(commands.Cog):
                 2: "<:Karma:1355636692077514952>",
                 3: "<:Laurel:1355637162845929492>",
                 4: "<:Gema:1355636846331433150>",
-                5: "<:TaleofDungeonDelving:1355637498465747119>",
-                7: "<:FractalRelic:1357067940947820684>",
                 15: "<:Badge_of_Honor:1355639056922316923>",
                 19: "<:AirshipPart:1356719004554629206>",
                 20: "<:LeyLineCrystal:1356719240618447040>",
@@ -158,6 +156,7 @@ class WalletCog(commands.Cog):
                 63: "<:AstralAcclaim:1356714679321366668>",
                 66: "<:AncientCoin:1356723851257582020>",
                 68: "<:ImperialFavor:1356714893075808256>",
+                69: "<:TaleofDungeonDelving:1355637498465747119>",
                 70: "<:LegendaryInsight:1356712898252243135>",
                 73: "<:PinchofStardust:1356723379989909514>",
                 75: "<:CalcifiedGasp:1356723611926532107>",
@@ -202,7 +201,6 @@ class WalletCog(commands.Cog):
                 "Janthir Wilds", 
                 "Incursiones", 
                 "Competición"
-                            
             ]
 
             # Procesar las categorías en el orden específico
@@ -216,19 +214,16 @@ class WalletCog(commands.Cog):
                 if not category_currencies:
                     continue
                 
-                # Ordenar por valor (descendente) dentro de cada categoría
-                category_currencies.sort(key=lambda x: x['value'], reverse=True)
-                
-                category_text = ""
-                for item in category_currencies:
-                    currency_id = item['id']
-                    amount = item['value']
+                # Orden específico para monedas principales: primero oro (ID 1), luego karma (ID 2), y el resto por valor
+                if category_name == "Principales":
+                    # Crear un texto específico para las monedas principales con un orden fijo
+                    category_text = ""
                     
-                    # Si la moneda está en el mapa, usa su nombre, de lo contrario "Desconocido"
-                    currency_name = self.currency_map.get(currency_id, {}).get('name', f"ID:{currency_id}")
-                    emoji = emoji_map.get(currency_id, "🔹")
-
-                    if currency_id == 1:  # Oro
+                    # Primero el oro (ID 1)
+                    gold_item = next((item for item in category_currencies if item['id'] == 1), None)
+                    if gold_item:
+                        amount = gold_item['value']
+                        currency_name = self.currency_map.get(1, {}).get('name', "Oro")
                         gold = amount // 10000
                         silver = (amount % 10000) // 100
                         copper = amount % 100
@@ -236,8 +231,48 @@ class WalletCog(commands.Cog):
                             f"**{currency_name}**: "
                             f"{gold}{gold_emoji} {silver}{silver_emoji} {copper}{copper_emoji}\n"
                         )
-                    else:
+                    
+                    # Luego karma (ID 2)
+                    karma_item = next((item for item in category_currencies if item['id'] == 2), None)
+                    if karma_item:
+                        amount = karma_item['value']
+                        currency_name = self.currency_map.get(2, {}).get('name', "Karma")
+                        emoji = emoji_map.get(2, "🔹")
                         category_text += f"{emoji} **{currency_name}**: {amount:,}\n"
+                    
+                    # El resto de monedas principales en orden por valor
+                    other_currencies = [item for item in category_currencies if item['id'] not in [1, 2]]
+                    other_currencies.sort(key=lambda x: x['value'], reverse=True)
+                    
+                    for item in other_currencies:
+                        currency_id = item['id']
+                        amount = item['value']
+                        currency_name = self.currency_map.get(currency_id, {}).get('name', f"ID:{currency_id}")
+                        emoji = emoji_map.get(currency_id, "🔹")
+                        category_text += f"{emoji} **{currency_name}**: {amount:,}\n"
+                else:
+                    # Para otras categorías mantener el orden por valor descendente
+                    category_currencies.sort(key=lambda x: x['value'], reverse=True)
+                    
+                    category_text = ""
+                    for item in category_currencies:
+                        currency_id = item['id']
+                        amount = item['value']
+                        
+                        # Si la moneda está en el mapa, usa su nombre, de lo contrario "Desconocido"
+                        currency_name = self.currency_map.get(currency_id, {}).get('name', f"ID:{currency_id}")
+                        emoji = emoji_map.get(currency_id, "🔹")
+
+                        if currency_id == 1:  # Oro
+                            gold = amount // 10000
+                            silver = (amount % 10000) // 100
+                            copper = amount % 100
+                            category_text += (
+                                f"**{currency_name}**: "
+                                f"{gold}{gold_emoji} {silver}{silver_emoji} {copper}{copper_emoji}\n"
+                            )
+                        else:
+                            category_text += f"{emoji} **{currency_name}**: {amount:,}\n"
 
                 # Agregamos el campo solo si tiene contenido
                 if category_text:

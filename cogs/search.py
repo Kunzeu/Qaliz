@@ -12,9 +12,93 @@ from datetime import datetime
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Cache de items para autocompletado
+ITEMS_CACHE = {}
+LAST_CACHE_UPDATE = None
+CACHE_DURATION = 86400  # 24 horas en segundos
+
 class SearchCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
+        self.items_cache = {}  # Cache para resultados de búsqueda
+
+    async def item_name_autocomplete(
+        self, 
+        interaction: discord.Interaction, 
+        current: str
+    ) -> List[app_commands.Choice[str]]:
+        """Función de autocompletado para nombres de items"""
+        if not current:
+            return []
+        
+        # Obtener la API key del usuario
+        user_id = str(interaction.user.id)
+        api_key = await dbManager.getApiKey(user_id)
+        
+        if not api_key:
+            # Si no hay API key, devolvemos un mensaje indicándolo
+            return [app_commands.Choice(name="Necesitas configurar una API key primero", value="no_api_key")]
+        
+        # Verificar caché de items o actualizar si es necesario
+        await self._update_items_cache(api_key)
+        
+        # Buscar en la caché las coincidencias
+        current_lower = current.lower()
+        matches = []
+        
+        # Buscar items que coincidan con el texto actual
+        for item_id, item_data in ITEMS_CACHE.items():
+            if current_lower in item_data['name'].lower():
+                matches.append(
+                    app_commands.Choice(
+                        name=f"{item_data['name']} ({item_data['rarity']})",
+                        value=item_data['name']
+                    )
+                )
+                if len(matches) >= 25:  # Discord permite máximo 25 opciones
+                    break
+        
+        return matches
+
+    async def _update_items_cache(self, api_key: str) -> None:
+        """Actualiza la caché de items si es necesario"""
+        global ITEMS_CACHE, LAST_CACHE_UPDATE
+        
+        # Verificar si la caché necesita actualizarse
+        current_time = datetime.now().timestamp()
+        if LAST_CACHE_UPDATE is None or (current_time - LAST_CACHE_UPDATE > CACHE_DURATION):
+            logger.info("Actualizando caché de items para autocompletado...")
+            
+            # Aquí podríamos obtener una lista filtrada de items relevantes
+            # o los que son más comunes para minimizar el tamaño de la caché
+            
+            try:
+                # Método 1: Obtener items conocidos más populares
+                async with aiohttp.ClientSession() as session:
+                    # Lista de páginas de items populares (esto podría ser una aproximación)
+                    # Ideal: usar una API de frecuencia o popularidad si existe
+                    popular_pages = [0, 1, 2]  # Por ejemplo, primeras 3 páginas
+                    all_items = {}
+                    
+                    for page in popular_pages:
+                        async with session.get(
+                            f"https://api.guildwars2.com/v2/items?page={page}&page_size=200&access_token={api_key}"
+                        ) as response:
+                            if response.status == 200:
+                                items_page = await response.json()
+                                
+                                # Obtener detalles de items
+                                item_ids = [item['id'] for item in items_page]
+                                item_details = await self._get_item_details(api_key, set(item_ids))
+                                all_items.update(item_details)
+                    
+                    # Actualizar caché global
+                    ITEMS_CACHE = all_items
+                    LAST_CACHE_UPDATE = current_time
+                    logger.info(f"Caché de items actualizada con {len(ITEMS_CACHE)} items")
+                
+            except Exception as e:
+                logger.error(f"Error al actualizar caché de items: {str(e)}")
 
     @app_commands.command(
         name="search",
@@ -23,11 +107,17 @@ class SearchCog(commands.Cog):
     @app_commands.describe(
         item_name="Nombre del item a buscar"
     )
+    @app_commands.autocomplete(item_name=item_name_autocomplete)
     async def search(
         self,
         interaction: discord.Interaction,
         item_name: str
     ):
+        # Si el usuario seleccionó la opción que indica que necesita una API key
+        if item_name == "no_api_key":
+            await interaction.response.send_message("⚠️ No tienes una API key configurada. Usa `/apikey add` para añadir una.", ephemeral=True)
+            return
+        
         await interaction.response.defer(thinking=True)
 
         # Obtener la API key del usuario
@@ -106,6 +196,8 @@ class SearchCog(commands.Cog):
             logger.error(f"Error durante la búsqueda: {str(error)}")
             await interaction.followup.send(f"❌ Ocurrió un error al buscar: {str(error)}")
 
+    # El resto de métodos se mantienen iguales que en tu código original
+    
     async def get_api_permissions(self, api_key: str) -> List[str]:
         """Verifica los permisos de la API key"""
         async with aiohttp.ClientSession() as session:
@@ -351,7 +443,7 @@ class SearchCog(commands.Cog):
 
             if item_text:
                 embed.add_field(
-                    name=f"👤 {character}",
+                    name=f"<:Character_Slot_Expansion:1360792883807911997> {character}",
                     value=item_text,
                     inline=False
                 )
@@ -372,7 +464,7 @@ class SearchCog(commands.Cog):
 
             if bank_text:
                 embed.add_field(
-                    name=f"🏦 Banco",
+                    name=f"<:Bank:1360790407545356488> Banco",
                     value=bank_text,
                     inline=False
                 )
@@ -393,7 +485,7 @@ class SearchCog(commands.Cog):
 
             if materials_text:
                 embed.add_field(
-                    name=f"🗄️ Almacenamiento",
+                    name=f"<:MaterialStorageExpander:1360795006985830430> Almacenamiento",
                     value=materials_text,
                     inline=False
                 )
@@ -488,4 +580,4 @@ class SearchCog(commands.Cog):
 async def setup(bot):
     """Función para registrar el cog en el bot"""
     await bot.add_cog(SearchCog(bot))
-    print("✅ Cog de búsqueda unificado cargado")
+    print("✅ Cog de búsqueda unificado con autocompletado cargado")

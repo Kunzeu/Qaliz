@@ -23,29 +23,29 @@ class SearchCog(commands.Cog):
         self.items_cache = {}  # Cache para resultados de búsqueda
 
     async def item_name_autocomplete(
-        self, 
-        interaction: discord.Interaction, 
+        self,
+        interaction: discord.Interaction,
         current: str
     ) -> List[app_commands.Choice[str]]:
         """Función de autocompletado para nombres de items"""
         if not current:
             return []
-        
+
         # Obtener la API key del usuario
         user_id = str(interaction.user.id)
         api_key = await dbManager.getApiKey(user_id)
-        
+
         if not api_key:
             # Si no hay API key, devolvemos un mensaje indicándolo
             return [app_commands.Choice(name="Necesitas configurar una API key primero", value="no_api_key")]
-        
+
         # Verificar caché de items o actualizar si es necesario
         await self._update_items_cache(api_key)
-        
+
         # Buscar en la caché las coincidencias
         current_lower = current.lower()
         matches = []
-        
+
         # Buscar items que coincidan con el texto actual
         for item_id, item_data in ITEMS_CACHE.items():
             if current_lower in item_data['name'].lower():
@@ -57,21 +57,21 @@ class SearchCog(commands.Cog):
                 )
                 if len(matches) >= 25:  # Discord permite máximo 25 opciones
                     break
-        
+
         return matches
 
     async def _update_items_cache(self, api_key: str) -> None:
         """Actualiza la caché de items si es necesario"""
         global ITEMS_CACHE, LAST_CACHE_UPDATE
-        
+
         # Verificar si la caché necesita actualizarse
         current_time = datetime.now().timestamp()
         if LAST_CACHE_UPDATE is None or (current_time - LAST_CACHE_UPDATE > CACHE_DURATION):
             logger.info("Actualizando caché de items para autocompletado...")
-            
+
             # Aquí podríamos obtener una lista filtrada de items relevantes
             # o los que son más comunes para minimizar el tamaño de la caché
-            
+
             try:
                 # Método 1: Obtener items conocidos más populares
                 async with aiohttp.ClientSession() as session:
@@ -79,24 +79,24 @@ class SearchCog(commands.Cog):
                     # Ideal: usar una API de frecuencia o popularidad si existe
                     popular_pages = [0, 1, 2]  # Por ejemplo, primeras 3 páginas
                     all_items = {}
-                    
+
                     for page in popular_pages:
                         async with session.get(
                             f"https://api.guildwars2.com/v2/items?page={page}&page_size=200&access_token={api_key}"
                         ) as response:
                             if response.status == 200:
                                 items_page = await response.json()
-                                
+
                                 # Obtener detalles de items
                                 item_ids = [item['id'] for item in items_page]
                                 item_details = await self._get_item_details(api_key, set(item_ids))
                                 all_items.update(item_details)
-                    
+
                     # Actualizar caché global
                     ITEMS_CACHE = all_items
                     LAST_CACHE_UPDATE = current_time
                     logger.info(f"Caché de items actualizada con {len(ITEMS_CACHE)} items")
-                
+
             except Exception as e:
                 logger.error(f"Error al actualizar caché de items: {str(e)}")
 
@@ -117,7 +117,7 @@ class SearchCog(commands.Cog):
         if item_name == "no_api_key":
             await interaction.response.send_message("⚠️ No tienes una API key configurada. Usa `/apikey add` para añadir una.", ephemeral=True)
             return
-        
+
         await interaction.response.defer(thinking=True)
 
         # Obtener la API key del usuario
@@ -197,7 +197,7 @@ class SearchCog(commands.Cog):
             await interaction.followup.send(f"❌ Ocurrió un error al buscar: {str(error)}")
 
     # El resto de métodos se mantienen iguales que en tu código original
-    
+
     async def get_api_permissions(self, api_key: str) -> List[str]:
         """Verifica los permisos de la API key"""
         async with aiohttp.ClientSession() as session:
@@ -388,7 +388,6 @@ class SearchCog(commands.Cog):
 
         # Obtener contenido del almacenamiento de materiales
         materials = await self._get_materials(api_key)
-
         # Recopilar IDs de materiales, SUMANDO si hay duplicados
         for slot in materials:
             if not slot or slot.get('count', 0) <= 0:
@@ -501,7 +500,14 @@ class SearchCog(commands.Cog):
             locations_text.append("almacenamiento")
 
         locations_str = ", ".join(locations_text) if locations_text else "ninguna ubicación"
-        embed.set_footer(text=f"Total: {total_items} items en **{locations_str}")
+
+        embed.add_field(
+            name=f"**Total: {total_items} items en {locations_str}**",
+            value="",
+            inline=False
+        )
+
+        embed.set_footer(text=f"Resultados de búsqueda en {locations_counter} ubicaciones")
 
         # Añadir un color de borde basado en la rareza más alta encontrada
         highest_rarity = self.get_highest_rarity(results)

@@ -7,6 +7,33 @@ from typing import Dict, List, Set, Tuple, Optional
 import urllib
 
 # Bidirectional mapping of item IDs and names
+
+
+import discord
+from discord.ext import commands
+from discord import app_commands
+import aiohttp
+import urllib.parse
+import math
+import asyncio
+
+# Sets for special item categories
+EXCLUDED_LEGENDARY_ITEMS = {96978, 96722, 103351}
+NINETY_FIVE_PERCENT_ITEMS = {85016, 84731, 83008}
+
+# Rarity colors
+RARITY_COLORS = {
+    'Junk': 0x808080,      # Gray
+    'Basic': 0xFFFFFF,     # White
+    'Fine': 0x62A4DA,      # Blue
+    'Masterwork': 0x1A9306,# Green
+    'Rare': 0xFCD00B,      # Yellow
+    'Exotic': 0xFFA405,    # Orange
+    'Ascended': 0xFB3E8D,  # Pink
+    'Legendary': 0x4C139D  # Purple
+}
+
+# Items map - This is a simplified example. In a real implementation, this would be loaded from a file or database
 ITEMS_MAP = {
     30684: {"mainName": "Frostfang", "altNames": ["Frost", "Colmilloescarcha", "ff"]},
     30685: {"mainName": "Kudzu", "altNames": ["kudzu"]},
@@ -194,7 +221,7 @@ ITEMS_MAP = {
     24277: {"mainName": "Pile of Crystalline Dust", "altNames": ["Dust"]},
     68063: {"mainName": "Amalgamated Gemstone", "altNames": ["Gem", "amalgamada"]},
     19976: {"mainName": "Mystic Coin", "altNames": ["MC", "mc", "Monedas Misticas"]},
-    89271: {"mainName": "Pile of Lucent Crystal", "altNames": ["Lucent", "Montón de cristal luminoso", "Montón"]},
+    89271: {"mainName": "Pile of Lucent Crystal", "altNames": ["Lucent"]},
     24294: {"mainName": "Vial of Potent Blood", "altNames": ["Vial de sangre potente", "potente"]},
     24341: {"mainName": "Large Bone", "altNames": ["Hueso", "Hueso grande"]},
     24350: {"mainName": "Large Claw", "altNames": ["Garra grande"]},
@@ -215,215 +242,251 @@ ITEMS_MAP = {
     19685: {"mainName": "Orichalcum Ingot", "altNames": ["Ingot", "Orichalcum", "Oricalco"]},
     19701: {"mainName": "Orichalcum Ore", "altNames": ["Ori", "Mineral de oricalco"]},
     19737: {"mainName": "Cured Hardened Leather Square", "altNames": ["Retal", "Retal de cuero curado endurecido"]},
-    93241: {"mainName": "Chatoyant Elixir", "altNames": ["Elixir de ágata", "agata", "Chatoyant" "Elixir"]},
+    93241: {"mainName": "Chatoyant Elixir", "altNames": ["Elixir de ágata", "agata", "Chatoyant, Elixir"]},
     24467: {"mainName": "Tiger's Eye Pebble", "altNames": ["Guijarro de ojo de tigre", "Guijarro", "tigre"]},
-    89140: {"mainName": "Lucent Mote", "altNames": ["Mote", "Mota luminosa"]},
-
     # ... (rest of the item mappings) ...
 }
 
-# Sets for special item categories
-EXCLUDED_LEGENDARY_ITEMS = {96978, 96722, 103351}
-NINETY_FIVE_PERCENT_ITEMS = {85016, 84731, 83008}
-
-# Rarity colors
-# Rarity colors
-RARITY_COLORS = {
-    'Junk': 0x808080,      # Gray
-    'Basic': 0xFFFFFF,     # White
-    'Fine': 0x62A4DA,      # Blue
-    'Masterwork': 0x1A9306,# Green
-    'Rare': 0xFCD00B,      # Yellow
-    'Exotic': 0xFFA405,    # Orange
-    'Ascended': 0xFB3E8D,  # Pink
-    'Legendary': 0x4C139D  # Purple
-}
+# Función para cargar ITEMS_MAP desde un archivo JSON - implementar si es necesario
 
 class ItemPrice(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
+        self.items_loaded = False
+        
+    async def cog_load(self):
+        # Opcional: Cargar los ítems al iniciar
+        # global ITEMS_MAP
+        # ITEMS_MAP = await load_items_map()
+        # self.items_loaded = True
+        pass
 
-    def get_rarity_color(self, rarity: str) -> int:
-        return RARITY_COLORS.get(rarity, 0x000000)
+    def obtener_color_rareza(self, rareza: str) -> int:
+        return RARITY_COLORS.get(rareza, 0x000000)
 
-    async def get_icon_url(self, session: aiohttp.ClientSession, objeto_id: int) -> str:
+    async def obtener_icono_url(self, session: aiohttp.ClientSession, objeto_id: int) -> str:
         try:
-            async with session.get(f"https://api.guildwars2.com/v2/items/{objeto_id}") as response:
-                objeto_details = await response.json()
-                return objeto_details["icon"]
+            async with session.get(f"https://api.guildwars2.com/v2/items/{objeto_id}", timeout=aiohttp.ClientTimeout(total=5)) as response:
+                if response.status != 200:
+                    return None
+                detalles = await response.json()
+                return detalles["icon"]
         except Exception as error:
-            print(f'Error getting the icon URL from the API: {error}')
+            print(f'Error al obtener el ícono desde la API: {error}')
             return None
 
-    async def get_precio_ecto(self, session: aiohttp.ClientSession) -> int:
+    async def obtener_precio_ecto(self, session: aiohttp.ClientSession) -> int:
         try:
-            async with session.get('https://api.guildwars2.com/v2/commerce/prices/19721') as response:
+            async with session.get('https://api.guildwars2.com/v2/commerce/prices/19721', timeout=aiohttp.ClientTimeout(total=5)) as response:
+                if response.status != 200:
+                    return None
                 ecto = await response.json()
                 return ecto['sells']['unit_price']
         except Exception as error:
-            print(f'Error when getting the price of the ectos from the API: {error}')
+            print(f'Error al obtener el precio de los ectos desde la API: {error}')
             return None
 
-    async def get_precio_moneda_mistica(self, session: aiohttp.ClientSession) -> int:
+    async def obtener_precio_moneda_mistica(self, session: aiohttp.ClientSession) -> int:
         try:
-            async with session.get('https://api.guildwars2.com/v2/commerce/prices/19976') as response:
-                moneda_mistica = await response.json()
-                return moneda_mistica['sells']['unit_price']
+            async with session.get('https://api.guildwars2.com/v2/commerce/prices/19976', timeout=aiohttp.ClientTimeout(total=5)) as response:
+                if response.status != 200:
+                    return None
+                moneda = await response.json()
+                return moneda['sells']['unit_price']
         except Exception as error:
-            print(f'Error when getting the price of the Mystic Coins from the API: {error}')
+            print(f'Error al obtener el precio de las Monedas Místicas desde la API: {error}')
             return None
 
-    def find_object_id_by_name(self, name: str) -> int:
-        name_lower = name.lower()
+    def buscar_id_por_nombre(self, nombre: str) -> int:
+        if not nombre:
+            return None
+            
+        nombre = nombre.lower().strip()
         for id_, item in ITEMS_MAP.items():
-            main_name = item["mainName"].lower()
-            if main_name == name_lower or (
-                "altNames" in item and 
-                any(alt_name.lower() == name_lower for alt_name in item["altNames"])
-            ):
+            principal = item["mainName"].lower()
+            if principal == nombre:
+                return id_
+            if "altNames" in item and any(alt.lower() == nombre for alt in item["altNames"]):
                 return id_
         return None
 
     def calcular_monedas(self, precio: int) -> str:
+        if precio is None:
+            return "N/A"
         oro = precio // 10000
         plata = (precio % 10000) // 100
         cobre = precio % 100
         return f"{oro} <:gold:1328507096324374699> {plata} <:silver:1328507117748879422> {cobre} <:Copper:1328507127857418250>"
 
-    def format_sell_listings(self, listings: dict, max_entries: int = 5) -> str:
-        if not listings.get("sells"):
-            return "No sell listings available"
+    def formatear_listados_venta(self, listados: dict, max_entries: int = 5) -> str:
+        if not listados or "sells" not in listados or not listados["sells"]:
+            return "No hay listados de venta disponibles"
         
-        formatted_listings = []
-        for i, entry in enumerate(listings["sells"][:max_entries]):
-            price_str = self.calcular_monedas(entry["unit_price"])
-            formatted_listings.append(f"{i + 1}. {price_str} ({entry['quantity']}x)")
+        formateados = []
+        for i, entrada in enumerate(listados["sells"][:max_entries]):
+            precio = self.calcular_monedas(entrada["unit_price"])
+            formateados.append(f"{i + 1}. {precio} ({entrada['quantity']}x)")
         
-        return "\n".join(formatted_listings)
+        return "\n".join(formateados)
 
-    @app_commands.command(name="item", description="Displays the price and image of an object.")
+    @app_commands.command(name="item", description="Muestra el precio e imagen de un objeto.")
     @app_commands.describe(
-        item="ID or name of the object to obtain the price and the image.",
-        quantity="The quantity of the item to calculate the price for."
+        item="ID o nombre del objeto para obtener su precio e imagen.",
+        quantity="Cantidad del objeto para calcular el precio total."
     )
-    async def item(self, interaction: discord.Interaction, item: str, quantity: int):
-        objeto_id = int(item) if item.isdigit() else self.find_object_id_by_name(item)
-
+    async def item(self, interaction: discord.Interaction, item: str, quantity: int = 1):
+        await interaction.response.defer(thinking=True)
+        
+        # if not self.items_loaded:
+        #     global ITEMS_MAP
+        #     ITEMS_MAP = await load_items_map()
+        #     self.items_loaded = True
+        
         try:
-            if not objeto_id or objeto_id not in ITEMS_MAP:
-                await interaction.response.send_message('The object with that ID or name was not found.')
+            objeto_id = int(item) if item.isdigit() else self.buscar_id_por_nombre(item)
+
+            if not objeto_id:
+                await interaction.followup.send('El objeto con ese ID o nombre no fue encontrado.')
                 return
 
-            async with aiohttp.ClientSession() as session:
-                # Get item price data
-                async with session.get(f"https://api.guildwars2.com/v2/commerce/prices/{objeto_id}") as response:
-                    objeto = await response.json()
+            timeout = aiohttp.ClientTimeout(total=10)
+            async with aiohttp.ClientSession(timeout=timeout) as session:
+                try:
+                    async with session.get(f"https://api.guildwars2.com/v2/items/{objeto_id}?lang=es") as test_response:
+                        if test_response.status != 200:
+                            await interaction.followup.send(f'No se encontró el objeto con ID {objeto_id} en la API.')
+                            return
+                except Exception:
+                    await interaction.followup.send('Error al conectar con la API de Guild Wars 2. Inténtalo más tarde.')
+                    return
+                
+                try:
+                    async with session.get(f"https://api.guildwars2.com/v2/commerce/prices/{objeto_id}") as response:
+                        if response.status != 200:
+                            await interaction.followup.send('Este objeto no tiene un precio válido en el Trading Post.')
+                            return
+                        objeto = await response.json()
+                except asyncio.TimeoutError:
+                    await interaction.followup.send('La solicitud de precios está tardando demasiado. Inténtalo más tarde.')
+                    return
+                except Exception as e:
+                    await interaction.followup.send(f'Error al obtener los precios: {str(e)}')
+                    return
 
                 if not objeto or "sells" not in objeto or "buys" not in objeto:
-                    await interaction.response.send_message('The object does not have a valid selling price in the API.')
+                    await interaction.followup.send('El objeto no tiene un precio de venta válido en la API.')
                     return
 
                 precio_venta = objeto["sells"]["unit_price"] * quantity
                 precio_compra = objeto["buys"]["unit_price"] * quantity
 
-                # Get item details
-                async with session.get(f"https://api.guildwars2.com/v2/items/{objeto_id}?lang=en") as response:
-                    objeto_details = await response.json()
+                try:
+                    async with session.get(f"https://api.guildwars2.com/v2/items/{objeto_id}?lang=es") as response:
+                        if response.status != 200:
+                            await interaction.followup.send('Error al obtener detalles del objeto.')
+                            return
+                        detalles = await response.json()
+                except Exception as e:
+                    await interaction.followup.send(f'Error al obtener detalles del objeto: {str(e)}')
+                    return
 
-                nombre_objeto = objeto_details["name"]
-                rareza_objeto = objeto_details["rarity"]
-                imagen_objeto = objeto_details["icon"]
+                nombre = detalles["name"]
+                rareza = detalles["rarity"]
+                icono = detalles["icon"]
 
-                # Calculate discount
                 descuento = (0.95 if objeto_id in NINETY_FIVE_PERCENT_ITEMS else 
-                           0.85 if rareza_objeto == "Legendary" and objeto_id not in EXCLUDED_LEGENDARY_ITEMS else 
-                           0.90)
-                precio_descuento = math.floor(precio_venta * descuento)
-                precio_descuento_unidad = math.floor(objeto["sells"]["unit_price"] * descuento)
+                             0.85 if rareza == "Legendary" and objeto_id not in EXCLUDED_LEGENDARY_ITEMS else 
+                             0.90)
+                precio_desc = math.floor(precio_venta * descuento)
+                precio_desc_unidad = math.floor(objeto["sells"]["unit_price"] * descuento)
 
-                # Get ecto and MC prices
-                precio_ecto = await self.get_precio_ecto(session)
-                precio_moneda_mistica = await self.get_precio_moneda_mistica(session)
+                precio_ecto = await self.obtener_precio_ecto(session)
+                precio_moneda = await self.obtener_precio_moneda_mistica(session)
 
-                # Get listings
-                async with session.get(f"https://api.guildwars2.com/v2/commerce/listings/{objeto_id}") as response:
-                    listings = await response.json()
+                try:
+                    async with session.get(f"https://api.guildwars2.com/v2/commerce/listings/{objeto_id}") as response:
+                        if response.status == 200:
+                            listados = await response.json()
+                        else:
+                            listados = {"sells": []}
+                except Exception:
+                    listados = {"sells": []}
 
-                # Calculate ecto and MC equivalents
-                ectos_requeridos = None
-                num_stacks_ectos = None
-                ectos_adicionales = None
-                monedas_misticas_requeridas = None
-                num_stacks_monedas = None
-                monedas_adicionales = None
+                ectos_req = None
+                stacks_ectos = None
+                ectos_extra = None
+                monedas_req = None
+                stacks_monedas = None
+                monedas_extra = None
 
                 if precio_ecto:
-                    ectos_requeridos = math.ceil(precio_descuento / (precio_ecto * 0.9))
-                    num_stacks_ectos = ectos_requeridos // 250
-                    ectos_adicionales = ectos_requeridos % 250
+                    ectos_req = math.ceil(precio_desc / (precio_ecto * 0.9))
+                    stacks_ectos = ectos_req // 250
+                    ectos_extra = ectos_req % 250
 
-                if precio_moneda_mistica:
-                    monedas_misticas_requeridas = math.ceil(precio_descuento / (precio_moneda_mistica * 0.9))
-                    num_stacks_monedas = monedas_misticas_requeridas // 250
-                    monedas_adicionales = monedas_misticas_requeridas % 250
+                if precio_moneda:
+                    monedas_req = math.ceil(precio_desc / (precio_moneda * 0.9))
+                    stacks_monedas = monedas_req // 250
+                    monedas_extra = monedas_req % 250
 
-                # Create embed
                 embed = discord.Embed(
-                    title=f"💰 Price of {nombre_objeto}",
-                    color=self.get_rarity_color(rareza_objeto)
+                    title=f"💰 Precio de {nombre}",
+                    color=self.obtener_color_rareza(rareza)
                 )
-                embed.set_thumbnail(url=imagen_objeto)
+                embed.set_thumbnail(url=icono)
 
-                # Add fields
                 embed.add_field(
-                    name="<:TP:1328507535245836439> TP prices",
-                    value=f"Sell: {self.calcular_monedas(precio_venta)}\nBuy: {self.calcular_monedas(precio_compra)}",
+                    name="<:TP:1328507535245836439> Precios TP",
+                    value=f"Venta: {self.calcular_monedas(precio_venta)}\nCompra: {self.calcular_monedas(precio_compra)}",
                     inline=False
                 )
 
                 embed.add_field(
-                    name=f"💎 Price at {descuento * 100}%",
-                    value=f"Per unit: {self.calcular_monedas(precio_descuento_unidad)}\n"
-                           f"**Total ({quantity}x): {self.calcular_monedas(precio_descuento)}**",
+                    name=f"💎 Precio al {descuento * 100}%",
+                    value=f"Por unidad: {self.calcular_monedas(precio_desc_unidad)}\n"
+                          f"**Total ({quantity}x): {self.calcular_monedas(precio_desc)}**",
                     inline=False
                 )
 
                 embed.add_field(
-                    name="<:TP2:1328507585153990707> Sell Listings",
-                    value=self.format_sell_listings(listings),
+                    name="<:TP2:1328507585153990707> Ofertas de venta",
+                    value=self.formatear_listados_venta(listados),
                     inline=False
                 )
 
-                if ectos_requeridos:
+                if ectos_req:
                     embed.add_field(
-                        name="<:Ecto:1328507640635986041> Equivalent in Ectos",
-                        value=f"{num_stacks_ectos} stack{'s' if num_stacks_ectos != 1 else ''} and {ectos_adicionales} additional\n"
-                               f"Total: {ectos_requeridos} <:Ecto:1328507640635986041>",
+                        name="<:Ecto:1328507640635986041> Equivalente en Ectos",
+                        value=f"{stacks_ectos} stack{'s' if stacks_ectos != 1 else ''} y {ectos_extra} adicionales\n"
+                              f"Total: {ectos_req} <:Ecto:1328507640635986041>",
                         inline=True
                     )
 
-                if monedas_misticas_requeridas:
+                if monedas_req:
                     embed.add_field(
-                        name="<:mc:1328507835478315140> Equivalent in Mystic Coins",
-                        value=f"{num_stacks_monedas} stack{'s' if num_stacks_monedas != 1 else ''} and {monedas_adicionales} additional\n"
-                               f"Total: {monedas_misticas_requeridas} <:mc:1328507835478315140>",
+                        name="<:mc:1328507835478315140> Equivalente en Monedas Místicas",
+                        value=f"{stacks_monedas} stack{'s' if stacks_monedas != 1 else ''} y {monedas_extra} adicionales\n"
+                              f"Total: {monedas_req} <:mc:1328507835478315140>",
                         inline=True
                     )
 
                 embed.add_field(
-                    name="🔗 Links",
+                    name="🔗 Enlaces",
                     value=f"[GW2BLTC](https://www.gw2bltc.com/en/item/{objeto_id}) • "
-                          f"[Wiki](https://wiki.guildwars2.com/wiki/Special:Search/{urllib.parse.quote(nombre_objeto)})",
+                          f"[Wiki](https://wiki.guildwars2.com/wiki/Special:Search/{urllib.parse.quote(nombre)})",
                     inline=False
                 )
 
-                embed.set_footer(text=f"ID: {objeto_id} • Rarity: {rareza_objeto}", icon_url=imagen_objeto)
+                embed.set_footer(text=f"ID: {objeto_id} • Rareza: {rareza}", icon_url=icono)
 
-                await interaction.response.send_message(embed=embed)
+                await interaction.followup.send(embed=embed)
 
+        except asyncio.TimeoutError:
+            await interaction.followup.send('La consulta a la API está tardando demasiado. Por favor intenta más tarde.')
         except Exception as error:
-            print(f'Error when making the API request: {error}')
-            await interaction.response.send_message('Oops! There was an error getting the price of the object from the API.')
+            print(f'Error al realizar la solicitud a la API: {error}')
+            await interaction.followup.send('¡Ups! Hubo un error al obtener la información del objeto.')
 
+# Función de carga
 async def setup(bot):
     await bot.add_cog(ItemPrice(bot))

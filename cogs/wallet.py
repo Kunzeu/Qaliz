@@ -112,7 +112,7 @@ class WalletCog(commands.Cog):
 
             # Mapeo de IDs de monedas a categorías (actualizado)
             categories = {
-                "Principales": [1, 2, 3, 4, 23, 24, 63, 68],  # Monedas principales
+                "Principales": [1, 2, 3, 4, 7, 23, 24, 63, 68],  # Monedas principales
                 "Magia Especial": [45, 32],  
                 "Tokens": [29, 50, 59, 69], 
                 "Monedas de Mapa": [19, 20, 22],

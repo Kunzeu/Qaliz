@@ -7,8 +7,8 @@ from datetime import datetime
 # Diccionario de zonas horarias y banderas
 timezones = {
     "🇪🇸": "Europe/Madrid",
-    "🇦🇷 🇨🇱": "America/Argentina/Buenos_Aires",
-    "🇩🇴": "America/Santo_Domingo",
+    "🇦🇷": "America/Argentina/Buenos_Aires",
+    "🇨🇱 🇩🇴": "America/Santo_Domingo",
     "🇨🇴 🇵🇪": "America/Bogota",
     "🇲🇽 🇸🇻": "America/Mexico_City",
 }

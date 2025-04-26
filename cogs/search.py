@@ -17,15 +17,16 @@ ITEMS_CACHE = {}
 LAST_CACHE_UPDATE = None
 CACHE_DURATION = 86400  # 24 horas en segundos
 
+
 class SearchCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.items_cache = {}  # Cache para resultados de búsqueda
 
     async def item_name_autocomplete(
-        self,
-        interaction: discord.Interaction,
-        current: str
+            self,
+            interaction: discord.Interaction,
+            current: str
     ) -> List[app_commands.Choice[str]]:
         """Función de autocompletado para nombres de items"""
         if not current:
@@ -82,7 +83,7 @@ class SearchCog(commands.Cog):
 
                     for page in popular_pages:
                         async with session.get(
-                            f"https://api.guildwars2.com/v2/items?page={page}&page_size=200&access_token={api_key}"
+                                f"https://api.guildwars2.com/v2/items?page={page}&page_size=200&access_token={api_key}"
                         ) as response:
                             if response.status == 200:
                                 items_page = await response.json()
@@ -102,20 +103,21 @@ class SearchCog(commands.Cog):
 
     @app_commands.command(
         name="search",
-        description="Busca un item en todos los personajes, banco y almacenamiento de tu cuenta"
+        description="Busca un item en todos los personajes, banco, almacenamiento y casillas compartidas de tu cuenta"
     )
     @app_commands.describe(
         item_name="Nombre del item a buscar"
     )
     @app_commands.autocomplete(item_name=item_name_autocomplete)
     async def search(
-        self,
-        interaction: discord.Interaction,
-        item_name: str
+            self,
+            interaction: discord.Interaction,
+            item_name: str
     ):
         # Si el usuario seleccionó la opción que indica que necesita una API key
         if item_name == "no_api_key":
-            await interaction.response.send_message("⚠️ No tienes una API key configurada. Usa `/apikey add` para añadir una.", ephemeral=True)
+            await interaction.response.send_message(
+                "⚠️ No tienes una API key configurada. Usa `/apikey add` para añadir una.", ephemeral=True)
             return
 
         await interaction.response.defer(thinking=True)
@@ -141,7 +143,8 @@ class SearchCog(commands.Cog):
             has_wallet_access = "wallet" in permissions
 
             if not has_characters_access and not has_inventories_access:
-                await interaction.followup.send("⚠️ Tu API key no tiene los permisos necesarios para ver personajes ni inventario.")
+                await interaction.followup.send(
+                    "⚠️ Tu API key no tiene los permisos necesarios para ver personajes ni inventario.")
                 return
 
             # Configuración de tareas
@@ -169,20 +172,28 @@ class SearchCog(commands.Cog):
             else:
                 tasks.append(asyncio.create_task(asyncio.sleep(0)))  # Tarea nula
 
+            # Tarea para buscar en casillas compartidas
+            if has_inventories_access:
+                tasks.append(self.search_item_in_shared_slots(api_key, search_term_lower))
+            else:
+                tasks.append(asyncio.create_task(asyncio.sleep(0)))  # Tarea nula
+
             # Esperar resultados
             results_list = await asyncio.gather(*tasks)
             char_results = results_list[0] if has_characters_access and characters else {}
             bank_results = results_list[1] if has_inventories_access else []
             material_results = results_list[2] if has_inventories_access else []
+            shared_results = results_list[3] if has_inventories_access else []
 
             # Combinar resultados
             results = {
                 "personajes": char_results,
                 "banco": bank_results,
-                "materiales": material_results
+                "materiales": material_results,
+                "compartidos": shared_results
             }
 
-            if not char_results and not bank_results and not material_results:
+            if not char_results and not bank_results and not material_results and not shared_results:
                 await interaction.followup.send(
                     f"🔍 No se encontró ningún item que coincida con '{item_name}'."
                 )
@@ -237,7 +248,7 @@ class SearchCog(commands.Cog):
         """Obtiene el inventario completo de un personaje"""
         async with aiohttp.ClientSession() as session:
             async with session.get(
-                f"https://api.guildwars2.com/v2/characters/{character_name}/inventory?access_token={api_key}"
+                    f"https://api.guildwars2.com/v2/characters/{character_name}/inventory?access_token={api_key}"
             ) as response:
                 if response.status != 200:
                     return {}
@@ -254,7 +265,17 @@ class SearchCog(commands.Cog):
     async def _get_materials(self, api_key: str) -> List[Dict]:
         """Obtiene el almacenamiento de materiales"""
         async with aiohttp.ClientSession() as session:
-            async with session.get(f"https://api.guildwars2.com/v2/account/materials?access_token={api_key}") as response:
+            async with session.get(
+                    f"https://api.guildwars2.com/v2/account/materials?access_token={api_key}") as response:
+                if response.status != 200:
+                    return []
+                return await response.json()
+
+    async def _get_shared_inventory(self, api_key: str) -> List[Dict]:
+        """Obtiene el contenido de las casillas compartidas"""
+        async with aiohttp.ClientSession() as session:
+            async with session.get(
+                    f"https://api.guildwars2.com/v2/account/inventory?access_token={api_key}") as response:
                 if response.status != 200:
                     return []
                 return await response.json()
@@ -267,7 +288,7 @@ class SearchCog(commands.Cog):
         result = {}
 
         # Dividir en chunks de 50 para evitar límites de la API
-        chunks = [list(item_ids)[i:i+50] for i in range(0, len(item_ids), 50)]
+        chunks = [list(item_ids)[i:i + 50] for i in range(0, len(item_ids), 50)]
 
         async with aiohttp.ClientSession() as session:
             tasks = []
@@ -415,6 +436,41 @@ class SearchCog(commands.Cog):
 
         return results
 
+    async def search_item_in_shared_slots(self, api_key: str, search_term: str) -> List[Dict]:
+        """Busca un item en las casillas compartidas por nombre (parcial)"""
+        results = []
+        shared_items = {}
+
+        # Obtener contenido de las casillas compartidas
+        shared_inventory = await self._get_shared_inventory(api_key)
+
+        # Recopilar IDs de items, SUMANDO si hay duplicados
+        for slot in shared_inventory:
+            if not slot:
+                continue
+
+            item_id = slot.get('id')
+            if item_id:
+                if item_id in shared_items:
+                    shared_items[item_id] += slot.get('count', 1)
+                else:
+                    shared_items[item_id] = slot.get('count', 1)
+
+        # Obtener detalles de todos los items encontrados
+        item_details = await self._get_item_details(api_key, set(shared_items.keys()))
+
+        # Filtrar items que coinciden con el nombre buscado
+        for item_id, item_data in item_details.items():
+            if search_term in item_data.get('name', '').lower():
+                results.append({
+                    'name': item_data.get('name'),
+                    'count': shared_items[item_id],
+                    'rarity': item_data.get('rarity'),
+                    'icon': item_data.get('icon')
+                })
+
+        return results
+
     def format_search_results(self, search_term: str, results: Dict, account_name: str) -> discord.Embed:
         """Formatea los resultados de búsqueda en un embed mejorado"""
         embed = discord.Embed(
@@ -433,8 +489,7 @@ class SearchCog(commands.Cog):
             character_total = 0
 
             for item in items:
-                rarity_color = self.get_rarity_color_emoji(item.get('rarity', 'Basic'))
-                item_text += f"{rarity_color} **{item['name']}** ×{item['count']}\n"
+                item_text += f"- **{item['name']}** ×{item['count']}\n"
                 character_total += item['count']
                 total_items += item['count']
                 if item_icon_url is None:
@@ -454,8 +509,7 @@ class SearchCog(commands.Cog):
             bank_total = 0
 
             for item in results["banco"]:
-                rarity_color = self.get_rarity_color_emoji(item.get('rarity', 'Basic'))
-                bank_text += f"{rarity_color} **{item['name']}** ×{item['count']}\n"
+                bank_text += f"- **{item['name']}** ×{item['count']}\n"
                 bank_total += item['count']
                 total_items += item['count']
                 if item_icon_url is None:
@@ -475,8 +529,7 @@ class SearchCog(commands.Cog):
             materials_total = 0
 
             for item in results["materiales"]:
-                rarity_color = self.get_rarity_color_emoji(item.get('rarity', 'Basic'))
-                materials_text += f"{rarity_color} **{item['name']}** ×{item['count']}\n"
+                materials_text += f"- **{item['name']}** ×{item['count']}\n"
                 materials_total += item['count']
                 total_items += item['count']
                 if item_icon_url is None:
@@ -490,6 +543,26 @@ class SearchCog(commands.Cog):
                 )
                 locations_counter += 1
 
+        # Procesar items en casillas compartidas
+        if results["compartidos"]:
+            shared_text = ""
+            shared_total = 0
+
+            for item in results["compartidos"]:
+                shared_text += f"- **{item['name']}** ×{item['count']}\n"
+                shared_total += item['count']
+                total_items += item['count']
+                if item_icon_url is None:
+                    item_icon_url = item.get('icon')
+
+            if shared_text:
+                embed.add_field(
+                    name=f"<:Shared_Inventory_Slot:1363372410958643302> Casillas Compartidas",
+                    value=shared_text,
+                    inline=False
+                )
+                locations_counter += 1
+
         # Texto para el footer
         locations_text = []
         if results["personajes"]:
@@ -498,6 +571,8 @@ class SearchCog(commands.Cog):
             locations_text.append("banco")
         if results["materiales"]:
             locations_text.append("almacenamiento")
+        if results["compartidos"]:
+            locations_text.append("casillas compartidas")
 
         locations_str = ", ".join(locations_text) if locations_text else "ninguna ubicación"
 
@@ -553,6 +628,12 @@ class SearchCog(commands.Cog):
             if rarity_order.get(item_rarity, 0) > rarity_order.get(highest, 0):
                 highest = item_rarity
 
+        # Revisar casillas compartidas
+        for item in results["compartidos"]:
+            item_rarity = item.get('rarity', 'Basic')
+            if rarity_order.get(item_rarity, 0) > rarity_order.get(highest, 0):
+                highest = item_rarity
+
         return highest
 
     def get_rarity_color(self, rarity: str) -> discord.Color:
@@ -569,19 +650,6 @@ class SearchCog(commands.Cog):
         }
         return colors.get(rarity, discord.Color.blue())
 
-    def get_rarity_color_emoji(self, rarity: str) -> str:
-        """Retorna un emoji según la rareza del item"""
-        rarities = {
-            'Junk': '🔘',
-            'Basic': '⚪',
-            'Fine': '🔵',
-            'Masterwork': '🟢',
-            'Rare': '🟡',
-            'Exotic': '🟠',
-            'Ascended': '🔴',
-            'Legendary': '💜'
-        }
-        return rarities.get(rarity, '⚪')
 
 async def setup(bot):
     """Función para registrar el cog en el bot"""

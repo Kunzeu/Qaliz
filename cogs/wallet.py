@@ -112,7 +112,7 @@ class WalletCog(commands.Cog):
 
             # Mapeo de IDs de monedas a categorías (actualizado)
             categories = {
-                "Principales": [1, 2, 3, 4, 23, 24, 63, 68],  # Monedas principales
+                "Principales": [1, 2, 3, 4, 7, 23, 24, 63, 68],  # Monedas principales
                 "Magia Especial": [45, 32],  
                 "Tokens": [29, 50, 59, 69], 
                 "Monedas de Mapa": [19, 20, 22],
@@ -135,6 +135,7 @@ class WalletCog(commands.Cog):
                 2: "<:Karma:1355636692077514952>",
                 3: "<:Laurel:1355637162845929492>",
                 4: "<:Gema:1355636846331433150>",
+                7: "<:FractalRelic:1357067940947820684>",
                 15: "<:Badge_of_Honor:1355639056922316923>",
                 19: "<:AirshipPart:1356719004554629206>",
                 20: "<:LeyLineCrystal:1356719240618447040>",

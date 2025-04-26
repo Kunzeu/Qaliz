@@ -244,6 +244,9 @@ ITEMS_MAP = {
     19737: {"mainName": "Cured Hardened Leather Square", "altNames": ["Retal", "Retal de cuero curado endurecido"]},
     93241: {"mainName": "Chatoyant Elixir", "altNames": ["Elixir de ágata", "agata", "Chatoyant, Elixir"]},
     24467: {"mainName": "Tiger's Eye Pebble", "altNames": ["Guijarro de ojo de tigre", "Guijarro", "tigre"]},
+    13417: {"mainName": "Ruby Orichalcum Ring", "altNames": ["Ruby", "Anillo de oricalco y rubí", "anillo", "Ring"]},
+    13501: {"mainName": "Ruby Orichalcum Amulet", "alNames": ["Amulet", "Amuleto","Amuleto de oricalco y rubí"]},
+    13459: {"mainName": "Ruby Orichalcum Earring", "altNames": ["Pendiente de oricalco y rubí", "Pendiente", "Earring"]}
     # ... (rest of the item mappings) ...
 }
 

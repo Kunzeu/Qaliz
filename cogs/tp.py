@@ -179,10 +179,29 @@ class BazarCommands(commands.Cog):
 
                 price_formatted = f"{price_gold}g {price_silver}s {price_copper}c"
 
+                # Verificar el precio de venta más bajo actual en el mercado
+                current_lowest_sell = None
+                undercut_message = ""
+                if item_id in prices_dict and "sells" in prices_dict[item_id]:
+                    current_lowest_sell = prices_dict[item_id]["sells"]["unit_price"]
+
+                    # Detectar si el precio de venta ha sido superado (undercut)
+                    if current_lowest_sell and current_lowest_sell < price_each:
+                        diff = price_each - current_lowest_sell
+                        diff_gold = diff // 10000
+                        diff_silver = (diff % 10000) // 100
+                        diff_copper = diff % 100
+                        undercut_message = (
+                            f" ⚠️ **Undercut!** El precio más bajo actual es "
+                            f"{current_lowest_sell // 10000}g {(current_lowest_sell % 10000) // 100}s "
+                            f"{current_lowest_sell % 100}c "
+                            f"(diferencia: {diff_gold}g {diff_silver}s {diff_copper}c)"
+                        )
+
                 # Texto para mostrar en el campo del embed
                 value_text = (
                     f"**Cantidad:** {quantity}\n"
-                    f"**Precio:** {price_formatted} c/u\n"
+                    f"**Precio:** {price_formatted} c/u{undercut_message}\n"
                     f"**Total:** {price_total // 10000}g {(price_total % 10000) // 100}s {price_total % 100}c"
                 )
 

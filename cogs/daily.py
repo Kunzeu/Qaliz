@@ -33,7 +33,7 @@ class Fractales(commands.Cog):
             {"nivel": 99, "nombre": "Oleaje Silencioso"},
             {"nivel": 100, "nombre": "Torre Solitaria"},
         ]
-        self.cm_rotaciones = [self.cm_diarios] * 15
+        self.cm_rotations = [self.cm_diarios] * 15
 
         self.recomendados = [
             [{"nivel": 2, "nombre": "Sin Clasificar"}, {"nivel": 37, "nombre": "Arrecife de la Sirena"}, {"nivel": 53, "nombre": "Instalación Subterránea"}],
@@ -114,8 +114,9 @@ class Fractales(commands.Cog):
         # Ajustar el índice según si es hoy o mañana
         day_index = (current_day_index + day_offset) % 15
 
-        # Usar una fecha genérica para el embed (la fecha no influye en la rotación)
-        today = datetime.datetime(2025, 5, 2, tzinfo=datetime.timezone.utc)
+        # Usar la fecha actual para el embed en UTC
+        # Discord usa timestamps en segundos desde la época Unix
+        today = datetime.datetime.now(datetime.timezone.utc)
         if día == "mañana":
             today += datetime.timedelta(days=1)
         fecha_timestamp = int(today.timestamp())
@@ -127,7 +128,7 @@ class Fractales(commands.Cog):
             color=discord.Color.purple()
         )
 
-        embed.set_thumbnail(url="https://wiki.guildwars2.com/images/6/64/Fractals_of_the_Mists.png")
+        embed.set_thumbnail(url="https://wiki.guildwars2.com/images/3/38/Daily_Fractals.png")
 
         def format_fractal(f):
             if "aflicciones" in f:
@@ -145,7 +146,7 @@ class Fractales(commands.Cog):
             )
 
         # Campo para Fractales CM
-        if self.cm_rotaciones[day_index]:
+        if self.cm_rotations[day_index]:
             cm_text = "\n".join(format_fractal(f) for f in self.cm_rotations[day_index])
             embed.add_field(
                 name="<:Unstable_Fractal_Essence:1368035017560952952> Fractales CM",
@@ -162,7 +163,8 @@ class Fractales(commands.Cog):
                 inline=False
             )
 
-        embed.set_footer(text="Bot creado por [Tu Nombre] | Datos de Guild Wars 2", icon_url=self.bot.user.avatar.url if self.bot.user.avatar else None)
+        # Añadir un pie de página con información útil
+        embed.set_footer(text="La rotación se actualiza diariamente a las 00:00 UTC")
 
         await interaction.followup.send(embed=embed)
 

@@ -332,7 +332,7 @@ class ItemPrice(commands.Cog):
         
         return "\n".join(formateados)
 
-    @app_commands.command(name="item", description="Muestra el precio e imagen de un objeto.")
+    @app_commands.command(name="item", description="Muestra el precio e imagen de un objeto. Puedes seleccionar cantidad con Quantity.")
     @app_commands.describe(
         item="ID o nombre del objeto para obtener su precio e imagen.",
         quantity="Cantidad del objeto para calcular el precio total."

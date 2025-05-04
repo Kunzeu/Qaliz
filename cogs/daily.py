@@ -19,7 +19,7 @@ class Fractales(commands.Cog):
             [{"nivel": 95, "nombre": "Jefa Capitana Mai Trin"}, {"nivel": 84, "nombre": "Rocahonda"},
              {"nivel": 99, "nombre": "Oleaje Silencioso"}],
             [{"nivel": 96, "nombre": "Pesadilla"}, {"nivel": 86, "nombre": "Ceguera de la Nieve"},
-             {"nivel": 80 "nombre": "Océano Sólido"}],
+             {"nivel": 80, "nombre": "Océano Sólido"}],
             [{"nivel": 88, "nombre": "Caos"}, {"nivel": 91, "nombre": "Sin Clasificar"},
              {"nivel": 85, "nombre": "Campo de Batalla Urbano"}],
             [{"nivel": 84, "nombre": "Rocahonda"}, {"nivel": 83, "nombre": "Fragua Fundida"},

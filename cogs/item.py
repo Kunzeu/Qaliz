@@ -125,7 +125,7 @@ ITEMS_MAP = {
     89999: {"mainName": "Runa superior de Fuegos Artificiales", "altNames": ["Fuego", "Fireworks"]},
     24762: {"mainName": "Runa superior del Krait", "altNames": ["Krait"]},
     24839: {"mainName": "Runa superior del agua", "altNames": ["agua", "water"]},
-    74978: {"mainName": "Superior Rune of the Dragonhunter", "altNames": ["Dragon"]},
+    74978: {"mainName": "Superior Rune of the Dragonhunter", "altNames": ["Dragon", "dragonhunter", "cazadragones", "Runa superior del cazadragones"]},
     49424: {"mainName": "+1 Agony Infusion", "altNames": ["+1"]},
     49428: {"mainName": "+5 Agony Infusion", "altNames": ["+5"]},
     49429: {"mainName": "+6 Agony Infusion", "altNames": ["+6"]},

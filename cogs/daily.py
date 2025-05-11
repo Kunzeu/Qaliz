@@ -153,6 +153,27 @@ class Fractales(commands.Cog):
 
         return current_day_index
 
+    def get_reset_date(self, day_offset=0):
+        """
+        Devuelve la fecha del reset actual o futura según el offset
+        day_offset: 0 para hoy, 1 para mañana, etc.
+        """
+        now = datetime.datetime.now(datetime.timezone.utc)
+        reset_hour = 0  # Reset a medianoche UTC (7:00 PM Colombia)
+
+        # Determinar si ya pasó el reset de hoy
+        if now.hour < reset_hour:
+            # No ha pasado el reset, así que el "reset de hoy" fue ayer
+            reset_date = now.replace(hour=reset_hour, minute=0, second=0, microsecond=0) - datetime.timedelta(days=1)
+        else:
+            # Ya pasó el reset, así que el "reset de hoy" es hoy
+            reset_date = now.replace(hour=reset_hour, minute=0, second=0, microsecond=0)
+
+        # Añadir el offset de días solicitado
+        reset_date += datetime.timedelta(days=day_offset)
+
+        return reset_date
+
     @app_commands.command(name="fractales", description="Muestra los fractales diarios.")
     @app_commands.choices(día=[
         app_commands.Choice(name="Hoy", value="hoy"),
@@ -175,17 +196,14 @@ class Fractales(commands.Cog):
         # Mostrar información de diagnóstico en consola para verificar
         print(f"Día actual index: {current_day_index}, Día mostrado index: {day_index}")
 
-        # Usar la fecha actual para el embed en UTC
-        # Discord usa timestamps en segundos desde la época Unix
-        today = datetime.datetime.now(datetime.timezone.utc)
-        if día == "mañana":
-            today += datetime.timedelta(days=1)
-        fecha_timestamp = int(today.timestamp())
+        # Obtener la fecha correcta basada en el reset
+        reset_date = self.get_reset_date(day_offset)
+        fecha_timestamp = int(reset_date.timestamp())
 
         # Crear el embed
         embed = discord.Embed(
             title=f"🌌 Fractales Diarios de Tyria - {'Hoy' if día == 'hoy' else 'Mañana'}",
-            description=f"📅 **Fecha:** <t:{fecha_timestamp}:D>\n¡Prepárate para explorar los fractales del día! Aquí tienes la rotación {'diaria' if día == 'hoy' else 'de mañana'}:",
+            description=f"📅 **Fecha:** <t:{fecha_timestamp}:d>\n Aquí tienes la rotación {'diaria' if día == 'hoy' else 'de mañana'}:",
             color=discord.Color.purple()
         )
 
@@ -225,8 +243,6 @@ class Fractales(commands.Cog):
             )
 
         # Añadir un pie de página con información útil
-        embed.set_footer(text="La rotación se actualiza diariamente a las 7:00 PM hora de Colombia")
-
         await interaction.followup.send(embed=embed)
 
 

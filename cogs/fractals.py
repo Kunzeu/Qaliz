@@ -8,7 +8,7 @@ import requests
 class Fractals(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        # Rotaciones completas (mismo formato que antes)
+        # Complete rotations (same format as before)
         self.t4_rotations = [
             [{"level": 96, "name": "Nightmare"}, {"level": 86, "name": "Snowblind"},
              {"level": 92, "name": "Volcanic"}],
@@ -86,7 +86,7 @@ class Fractals(commands.Cog):
 
     def get_fractal_day_index(self):
         try:
-            # Primero intentamos con la API como antes
+            # First try with the API as before
             response = requests.get("https://api.guildwars2.com/v2/achievements/categories/88")
             category_data = response.json()
             achievement_ids = category_data.get("achievements", [])
@@ -104,44 +104,44 @@ class Fractals(commands.Cog):
                         if fractal_name in [f["name"] for sublist in self.t4_rotations for f in sublist]:
                             fractal_names.append(fractal_name)
 
-            # Comparar con las rotaciones para encontrar el día correspondiente
+            # Compare with rotations to find the corresponding day
             for i, rotation in enumerate(self.t4_rotations):
                 rotation_names = [f["name"] for f in rotation]
                 if set(fractal_names) == set(rotation_names):
                     return i
 
-            # Si no encontramos correspondencia con la API, usamos el cálculo basado en la fecha
+            # If no match found with API, use date-based calculation
             return self.calculate_day_index_by_date()
 
         except Exception as e:
-            print(f"Error al consultar la API: {e}")
-            # Si falla la API, calculamos el día según la fecha
+            print(f"Error querying API: {e}")
+            # If API fails, calculate day based on date
             return self.calculate_day_index_by_date()
 
     def calculate_day_index_by_date(self):
-        """Calcula el índice del día basado en la hora actual y una fecha de referencia"""
-        # Obtenemos la fecha y hora actual en UTC
+        """Calculates the day index based on current time and a reference date"""
+        # Get current date and time in UTC
         now = datetime.datetime.now(datetime.timezone.utc)
 
-        # Colombia es UTC-5, por lo que 7:00 PM en Colombia es 00:00 UTC
-        reset_hour = 0  # Hora de reset en UTC (medianoche UTC = 7:00 PM Colombia)
+        # Colombia is UTC-5, so 7:00 PM Colombia is 00:00 UTC
+        reset_hour = 0  # Reset hour in UTC (midnight UTC = 7:00 PM Colombia)
 
-        # Fecha de referencia: 3 de mayo de 2025 después del reset era día 4
-        # El 4 de mayo de 2025 es día 5
+        # Reference date: May 3, 2025 after reset was day 4
+        # May 4, 2025 is day 5
         reference_date = datetime.datetime(2025, 5, 4, reset_hour, 0, 0, tzinfo=datetime.timezone.utc)
-        reference_day_index = 4  # Día 5 (índice 4) para el 4 de mayo después del reset
+        reference_day_index = 4  # Day 5 (index 4) for May 4 after reset
 
-        # Determinamos si ya pasó el reset hoy
+        # Determine if today's reset has passed
         current_day = now.replace(hour=0, minute=0, second=0, microsecond=0)
 
-        # Si la hora actual es anterior a la hora de reset, usamos el día anterior
+        # If current hour is before reset hour, use previous day
         if now.hour < reset_hour:
             current_day = current_day - datetime.timedelta(days=1)
 
-        # Calculamos cuántos días han pasado desde la referencia
+        # Calculate days passed since reference
         days_passed = (current_day - reference_date.replace(hour=0, minute=0, second=0, microsecond=0)).days
 
-        # Calculamos el índice actual basado en la rotación de 15 días
+        # Calculate current index based on 15-day rotation
         current_day_index = (reference_day_index + days_passed) % 15
 
         # Debug info
@@ -211,7 +211,7 @@ class Fractals(commands.Cog):
 
         def format_fractal(f):
             if "instabilities" in f:
-                instabs = "\n".join(f"\t↳ {a}" for a in f["instabilities"])
+                instabs = "\n".join(f"    ↳ {a}" for a in f["instabilities"])
                 return f"**{f['level']} – {f['name']}**\n{instabs}"
             return f"**{f['level']} – {f['name']}**"
 

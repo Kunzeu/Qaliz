@@ -203,7 +203,7 @@ class Fractals(commands.Cog):
         # Create embed
         embed = discord.Embed(
             title=f"🌌 Daily Tyrian Fractals - {'Today' if day == 'today' else 'Tomorrow'}",
-            description=f"📅 **Date:** <t:{date_timestamp}:d>\n Here's the {'daily' if day == 'today' else 'tomorrow\'s'} rotation:",
+            description=f"📅 **Date:** <t:{date_timestamp}:d>\n Here's the {'daily' if day == 'today' else 'tomorrow''s'} rotation:",
             color=discord.Color.purple()
         )
 

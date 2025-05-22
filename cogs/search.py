@@ -12,16 +12,10 @@ from datetime import datetime
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Cache de items para autocompletado
-ITEMS_CACHE = {}
-LAST_CACHE_UPDATE = None
-CACHE_DURATION = 86400  # 24 horas en segundos
-
 
 class SearchCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.items_cache = {}  # Cache para resultados de búsqueda
 
     async def item_name_autocomplete(
             self,
@@ -37,69 +31,49 @@ class SearchCog(commands.Cog):
         api_key = await dbManager.getApiKey(user_id)
 
         if not api_key:
-            # Si no hay API key, devolvemos un mensaje indicándolo
             return [app_commands.Choice(name="Necesitas configurar una API key primero", value="no_api_key")]
 
-        # Verificar caché de items o actualizar si es necesario
-        await self._update_items_cache(api_key)
+        try:
+            async with aiohttp.ClientSession() as session:
+                # Primero obtenemos una página de IDs de items
+                async with session.get(
+                        f"https://api.guildwars2.com/v2/items?page=0&page_size=200"
+                ) as response:
+                    if response.status != 200:
+                        return []
 
-        # Buscar en la caché las coincidencias
-        current_lower = current.lower()
-        matches = []
+                    item_ids = await response.json()
 
-        # Buscar items que coincidan con el texto actual
-        for item_id, item_data in ITEMS_CACHE.items():
-            if current_lower in item_data['name'].lower():
-                matches.append(
-                    app_commands.Choice(
-                        name=f"{item_data['name']} ({item_data['rarity']})",
-                        value=item_data['name']
-                    )
-                )
-                if len(matches) >= 25:  # Discord permite máximo 25 opciones
-                    break
+                    # Luego obtenemos los detalles de esos items
+                    ids_param = ",".join(map(str, item_ids))
+                    async with session.get(
+                            f"https://api.guildwars2.com/v2/items?ids={ids_param}&lang=es"
+                    ) as details_response:
+                        if details_response.status != 200:
+                            return []
 
-        return matches
+                        items = await details_response.json()
+                        matches = []
+                        current_lower = current.lower()
 
-    async def _update_items_cache(self, api_key: str) -> None:
-        """Actualiza la caché de items si es necesario"""
-        global ITEMS_CACHE, LAST_CACHE_UPDATE
+                        for item in items:
+                            if current_lower in item['name'].lower():
+                                matches.append(
+                                    app_commands.Choice(
+                                        name=f"{item['name']} ({item['rarity']})",
+                                        value=item['name']
+                                    )
+                                )
+                                if len(matches) >= 25:
+                                    break
 
-        # Verificar si la caché necesita actualizarse
-        current_time = datetime.now().timestamp()
-        if LAST_CACHE_UPDATE is None or (current_time - LAST_CACHE_UPDATE > CACHE_DURATION):
-            logger.info("Actualizando caché de items para autocompletado...")
+                        return matches
 
-            # Aquí podríamos obtener una lista filtrada de items relevantes
-            # o los que son más comunes para minimizar el tamaño de la caché
+        except Exception as e:
+            logger.error(f"Error en autocompletado: {str(e)}")
+            return []
 
-            try:
-                # Método 1: Obtener items conocidos más populares
-                async with aiohttp.ClientSession() as session:
-                    # Lista de páginas de items populares (esto podría ser una aproximación)
-                    # Ideal: usar una API de frecuencia o popularidad si existe
-                    popular_pages = [0, 1, 2]  # Por ejemplo, primeras 3 páginas
-                    all_items = {}
-
-                    for page in popular_pages:
-                        async with session.get(
-                                f"https://api.guildwars2.com/v2/items?page={page}&page_size=200&access_token={api_key}"
-                        ) as response:
-                            if response.status == 200:
-                                items_page = await response.json()
-
-                                # Obtener detalles de items
-                                item_ids = [item['id'] for item in items_page]
-                                item_details = await self._get_item_details(api_key, set(item_ids))
-                                all_items.update(item_details)
-
-                    # Actualizar caché global
-                    ITEMS_CACHE = all_items
-                    LAST_CACHE_UPDATE = current_time
-                    logger.info(f"Caché de items actualizada con {len(ITEMS_CACHE)} items")
-
-            except Exception as e:
-                logger.error(f"Error al actualizar caché de items: {str(e)}")
+        return []
 
     @app_commands.command(
         name="search",
@@ -281,20 +255,19 @@ class SearchCog(commands.Cog):
                 return await response.json()
 
     async def _get_item_details(self, api_key: str, item_ids: Set[int]) -> Dict[int, Dict]:
-        """Obtiene detalles de los items por sus IDs"""
+        """Obtiene detalles de los items por sus IDs en español e inglés"""
         if not item_ids:
             return {}
 
         result = {}
-
-        # Dividir en chunks de 50 para evitar límites de la API
         chunks = [list(item_ids)[i:i + 50] for i in range(0, len(item_ids), 50)]
 
         async with aiohttp.ClientSession() as session:
+            # Obtener detalles en inglés
             tasks = []
             for chunk in chunks:
                 ids_param = ",".join(map(str, chunk))
-                url = f"https://api.guildwars2.com/v2/items?ids={ids_param}&access_token={api_key}"
+                url = f"https://api.guildwars2.com/v2/items?ids={ids_param}&lang=en&access_token={api_key}"
                 tasks.append(session.get(url))
 
             responses = await asyncio.gather(*tasks)
@@ -304,7 +277,27 @@ class SearchCog(commands.Cog):
                     items = await response.json()
                     for item in items:
                         item_id = item['id']
-                        result[item_id] = item
+                        if item_id not in result:
+                            result[item_id] = item
+                        result[item_id]['name_en'] = item['name']
+
+            # Obtener detalles en español
+            tasks = []
+            for chunk in chunks:
+                ids_param = ",".join(map(str, chunk))
+                url = f"https://api.guildwars2.com/v2/items?ids={ids_param}&lang=es&access_token={api_key}"
+                tasks.append(session.get(url))
+
+            responses = await asyncio.gather(*tasks)
+
+            for response in responses:
+                if response.status == 200:
+                    items = await response.json()
+                    for item in items:
+                        item_id = item['id']
+                        if item_id in result:
+                            result[item_id]['name'] = item['name']  # nombre en español por defecto
+                            result[item_id]['name_es'] = item['name']
 
         return result
 

@@ -3,83 +3,85 @@ from discord.ext import commands
 from discord import app_commands
 import requests
 
-class GW2Gemas(commands.Cog):
+
+class GW2Gems(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
     async def send_response(self, interaction: discord.Interaction, **kwargs):
-        """Método auxiliar para enviar respuestas de manera segura"""
+        """Helper method to send responses safely"""
         try:
             if not interaction.response.is_done():
                 await interaction.response.send_message(**kwargs)
             else:
                 await interaction.followup.send(**kwargs)
         except Exception as e:
-            print(f"Error al enviar respuesta: {e}")
+            print(f"Error sending response: {e}")
 
-    @app_commands.command(name="gemas", description="Muestra las tasas de conversión de gemas")
-    async def gemas(self, interaction: discord.Interaction, cantidad: int):
+    @app_commands.command(name="gems", description="Shows gem conversion rates")
+    async def gems(self, interaction: discord.Interaction, amount: int):
         """
-        Muestra cuánto cuestan las gemas en oro y cuánto oro recibirías por las gemas
-        
+        Shows how much gems cost in gold and how much gold you would receive for gems
+
         Parameters:
-        cantidad (int): Cantidad de gemas para calcular
+        amount (int): Amount of gems to calculate
         """
         try:
-            if cantidad <= 0:
-                await self.send_response(interaction, content="La cantidad debe ser mayor que 0.")
+            if amount < 50:
+                await self.send_response(interaction, content="The amount must be at least 50 gems.")
                 return
 
-            # Para comprar gemas necesitamos consultar cuánto oro cuesta la cantidad de gemas
-            estimated_gold = cantidad * 2000  # Estimación inicial
+            # To buy gems we need to check how much gold costs the amount of gems
+            estimated_gold = amount * 2000  # Initial estimation
             coins_to_gems_url = f"https://api.guildwars2.com/v2/commerce/exchange/coins?quantity={estimated_gold}"
-            
-            # Para vender gemas consultamos cuánto oro nos dan por las gemas
-            gems_to_coins_url = f"https://api.guildwars2.com/v2/commerce/exchange/gems?quantity={cantidad}"
 
-            # Hacemos las consultas
+            # To sell gems we check how much gold we get for the gems
+            gems_to_coins_url = f"https://api.guildwars2.com/v2/commerce/exchange/gems?quantity={amount}"
+
+            # Make the requests
             buy_response = requests.get(coins_to_gems_url).json()
             sell_response = requests.get(gems_to_coins_url).json()
 
-            # Procesamos el costo de comprar gemas
+            # Process the cost of buying gems
             coins_per_gem = buy_response.get('coins_per_gem', 0)
-            total_cost = cantidad * coins_per_gem
+            total_cost = amount * coins_per_gem
             gold_cost = total_cost // 10000
             silver_cost = (total_cost % 10000) // 100
             copper_cost = total_cost % 100
 
-            # Procesamos lo que recibiríamos por vender gemas
+            # Process what we would receive for selling gems
             coins_received = sell_response.get('quantity', 0)
             gold_received = coins_received // 10000
             silver_received = (coins_received % 10000) // 100
             copper_received = coins_received % 100
 
-            # Creamos el embed
+            # Create the embed
             embed = discord.Embed(
-                title="Cambio de divisa",
+                title="Currency Exchange",
                 color=discord.Color.blue()
             )
 
-            # Formato para compra de gemas
+            # Format for buying gems
             embed.add_field(
-                name=f"{cantidad:,} gemas te costarían",
+                name=f"{amount:,} gems would cost you",
                 value=f"{gold_cost:,} <:gold:1328507096324374699> {silver_cost} <:silver:1328507117748879422> {copper_cost} <:Copper:1328507127857418250>",
                 inline=False
             )
 
-            # Formato para venta de gemas
+            # Format for selling gems
             embed.add_field(
-                name=f"{cantidad:,} gemas te darían",
+                name=f"{amount:,} gems would give you",
                 value=f"{gold_received:,} <:gold:1328507096324374699> {silver_received} <:silver:1328507117748879422> {copper_received} <:Copper:1328507127857418250>",
                 inline=False
             )
 
-            # Enviar respuesta
+            # Send response
             await interaction.response.send_message(embed=embed)
 
         except Exception as e:
             error_message = f"Error: {str(e)}"
             await interaction.response.send_message(content=error_message)
 
+
 async def setup(bot):
-    await bot.add_cog(GW2Gemas(bot))
+    await bot.add_cog(GW2Gems(bot))

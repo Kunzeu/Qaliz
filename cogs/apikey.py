@@ -106,7 +106,6 @@ class ApiKey(commands.Cog):
                 await interaction.followup.send(embed=embed, ephemeral=True)
                 return
 
-            # Crear menú desplegable para seleccionar la API key a eliminar
             select = Select(
                 placeholder="Select an API key to remove...",
                 options=[
@@ -201,7 +200,6 @@ class ApiKey(commands.Cog):
                 await interaction.followup.send(embed=embed, ephemeral=True)
                 return
 
-            # Crear menú desplegable
             select = Select(
                 placeholder="Select an API key...",
                 options=[
@@ -218,7 +216,6 @@ class ApiKey(commands.Cog):
                 index = int(select.values[0])
                 success = await dbManager.setActiveApiKey(user_id, index)
 
-                # Obtener el account_name de la clave seleccionada
                 account_name = api_keys[index].get('account_name', 'Unknown')
 
                 embed = discord.Embed(

@@ -1,4 +1,4 @@
-# Discord Bot - Moodle
+# Discord Bot - Qaliz
 
 This is a Discord bot developed with `discord.py`, designed for *Guild Wars 2* players and server administrators. It integrates the *Guild Wars 2* (v2) API to provide real-time pricing, moderation tools and a custom command system.  
 
@@ -40,8 +40,8 @@ This is a Discord bot developed with `discord.py`, designed for *Guild Wars 2* p
 
 1. **Clone the Repository**:
    ````bash
-   git clone https://github.com/Kunzeu/Moodle.git
-   cd Moodle
+   git clone https://github.com/Kunzeu/Qaliz.git
+   cd Qaliz
 2. Install the required dependencies using ``pip install -r requirements.txt`.
 3. Get a Guild Wars 2 API key from (https://wiki.guildwars2.com/wiki/API:2) or directly in the code (be sure to keep it safe).
 4. Run the bot using `python index.py`.

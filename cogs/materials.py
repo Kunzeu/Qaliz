@@ -7,14 +7,14 @@ import aiohttp
 import asyncio
 from typing import Optional, List, Dict, Any
 
-# Configuración de emojis
+# Emoji configuration
 EMOJIS = {
     "GOLD": "<:gold:1328507096324374699>",
     "SILVER": "<:silver:1328507117748879422>",
     "COPPER": "<:Copper:1328507127857418250>"
 }
 
-# Lista unificada de materiales
+# Unified materials list
 MATERIALS = {
     "Magic": [
         {"name": "Vial of Powerful Blood", "itemId": 24295, "stackSize": 100, "type": "T6"},
@@ -54,6 +54,7 @@ MATERIALS = {
     ]
 }
 
+
 class MaterialPriceCalculator:
     @staticmethod
     def calculate_coins(copper: int) -> str:
@@ -79,7 +80,8 @@ class MaterialPriceCalculator:
             return valid_results
 
     @staticmethod
-    async def fetch_price_for_material(session: aiohttp.ClientSession, material: Dict[str, Any], url: str) -> Optional[Dict[str, Any]]:
+    async def fetch_price_for_material(session: aiohttp.ClientSession, material: Dict[str, Any], url: str) -> Optional[
+        Dict[str, Any]]:
         try:
             async with session.get(url) as response:
                 if response.status != 200:
@@ -105,13 +107,13 @@ class MaterialPriceCalculator:
     def create_embed(category: str, price_data: List[Dict[str, Any]] = None) -> discord.Embed:
         embed = discord.Embed(
             title="Material Prices",
-            description="Selecciona una categoría para ver los precios de los materiales.",
+            description="Select a category to view material prices.",
             color=discord.Color.blue()
         )
 
-        if price_data:  # Si hay datos de precios, mostrarlos
+        if price_data:  # If there's price data, display it
             total_price = sum(item['totalPrice'] for item in price_data)
-            discounted_price = int(total_price * 0.9)  # 90% de descuento
+            discounted_price = int(total_price * 0.9)  # 90% discount
             embed.title = f"Gift of Condensed {category.capitalize()} Material Prices"
             embed.description = f"Current Trading Post prices for Condensed {category} materials:"
             embed.add_field(
@@ -144,6 +146,7 @@ class MaterialPriceCalculator:
         embed.timestamp = discord.utils.utcnow()
         return embed
 
+
 class MaterialCommand(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
@@ -158,10 +161,12 @@ class MaterialCommand(commands.Cog):
     class MaterialSelect(Select):
         def __init__(self, cog, interaction):
             options = [
-                discord.SelectOption(label="Condensed Magic", value="Magic", description="Ver precios de Condensed Magic"),
-                discord.SelectOption(label="Condensed Might", value="Might", description="Ver precios de Condensed Might")
+                discord.SelectOption(label="Condensed Magic", value="Magic",
+                                     description="View Condensed Magic prices"),
+                discord.SelectOption(label="Condensed Might", value="Might",
+                                     description="View Condensed Might prices")
             ]
-            super().__init__(placeholder="Elige una categoría...", min_values=1, max_values=1, options=options)
+            super().__init__(placeholder="Choose a category...", min_values=1, max_values=1, options=options)
             self.cog = cog
             self.interaction = interaction
 
@@ -169,28 +174,28 @@ class MaterialCommand(commands.Cog):
             await interaction.response.defer(ephemeral=False)
             category = self.values[0]
             try:
-                # Mostrar un embed temporal de "Cargando..."
+                # Show a temporary "Loading..." embed
                 embed = discord.Embed(
-                    title="Cargando...",
-                    description="Obteniendo precios de materiales, por favor espera.",
+                    title="Loading...",
+                    description="Fetching material prices, please wait.",
                     color=discord.Color.blue()
                 )
                 embed.timestamp = discord.utils.utcnow()
                 await interaction.edit_original_response(embed=embed, view=self.view)
 
-                # Obtener los datos
+                # Get the data
                 price_data = await MaterialPriceCalculator.fetch_material_prices(MATERIALS[category])
                 if not price_data:
                     embed = discord.Embed(
                         title="Error",
-                        description="No se pudieron obtener los precios del Trading Post. Intenta de nuevo más tarde.",
+                        description="Could not fetch Trading Post prices. Please try again later.",
                         color=discord.Color.red(),
                         timestamp=discord.utils.utcnow()
                     )
                     await interaction.edit_original_response(embed=embed, view=self.view)
                     return
 
-                # Actualizar el embed con los datos
+                # Update the embed with the data
                 embed = MaterialPriceCalculator.create_embed(category, price_data)
                 await interaction.edit_original_response(embed=embed, view=self.view)
 
@@ -198,7 +203,7 @@ class MaterialCommand(commands.Cog):
                 logging.error(f"Value error in material command: {ve}")
                 embed = discord.Embed(
                     title="Error",
-                    description="No se pudieron calcular los precios debido a datos inválidos. Intenta de nuevo más tarde.",
+                    description="Could not calculate prices due to invalid data. Please try again later.",
                     color=discord.Color.red(),
                     timestamp=discord.utils.utcnow()
                 )
@@ -207,7 +212,7 @@ class MaterialCommand(commands.Cog):
                 logging.error(f"Unexpected error in material command: {error}")
                 embed = discord.Embed(
                     title="Error",
-                    description="Ocurrió un error inesperado. Intenta de nuevo más tarde.",
+                    description="An unexpected error occurred. Please try again later.",
                     color=discord.Color.red(),
                     timestamp=discord.utils.utcnow()
                 )
@@ -218,15 +223,16 @@ class MaterialCommand(commands.Cog):
 
     @app_commands.command(
         name="materials",
-        description="Muestra los precios de materiales para Condensed Magic o Might"
+        description="Shows material prices for Condensed Magic or Might"
     )
     async def materials(self, interaction: discord.Interaction):
         await interaction.response.defer(ephemeral=False)
         view = self.MaterialView(self, interaction)
         select = self.MaterialSelect(self, interaction)
         view.add_item(select)
-        embed = MaterialPriceCalculator.create_embed("default")  # Embed inicial
+        embed = MaterialPriceCalculator.create_embed("default")  # Initial embed
         await interaction.followup.send(embed=embed, view=view, ephemeral=False)
+
 
 async def setup(bot: commands.Bot):
     await bot.add_cog(MaterialCommand(bot))

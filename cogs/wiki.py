@@ -10,14 +10,14 @@ class WikiCommand(commands.Cog):
 
     async def get_page_info(self, search_term: str, lang: str) -> tuple[str, str]:
         """
-        Busca una página en la wiki y retorna el título y la URL
+        Searches for a page in the wiki and returns the title and URL
         """
         api_urls = {
             "en": "https://wiki.guildwars2.com/api.php",
             "es": "https://wiki-es.guildwars2.com/api.php"
         }
 
-        # Primero buscar la página
+        # First search for the page
         params = {
             "action": "query",
             "list": "search",
@@ -35,7 +35,7 @@ class WikiCommand(commands.Cog):
 
                 page_title = data["query"]["search"][0]["title"]
 
-        # Ahora obtener los enlaces entre idiomas
+        # Now get language links
         params = {
             "action": "query",
             "titles": page_title,
@@ -50,12 +50,12 @@ class WikiCommand(commands.Cog):
                 pages = data["query"]["pages"]
                 page = next(iter(pages.values()))
                 
-                # Obtener el título en el otro idioma
+                # Get title in other language
                 other_lang_title = None
                 if "langlinks" in page and page["langlinks"]:
                     other_lang_title = page["langlinks"][0]["*"]
 
-        # Construir URLs
+        # Build URLs
         wiki_urls = {
             "en": "https://wiki.guildwars2.com/wiki/",
             "es": "https://wiki-es.guildwars2.com/wiki/"
@@ -67,43 +67,43 @@ class WikiCommand(commands.Cog):
 
     @app_commands.command(
         name="wiki",
-        description="Busca en las wikis de Guild Wars 2 (EN y ES)"
+        description="Search the Guild Wars 2 wikis (EN and ES)"
     )
     @app_commands.describe(
-        busqueda="Término a buscar en la wiki"
+        search="Term to search in the wiki"
     )
-    async def wiki(self, interaction: discord.Interaction, busqueda: str):
+    async def wiki(self, interaction: discord.Interaction, search: str):
         await interaction.response.defer()
 
-        # Intentar encontrar la página en inglés primero
-        en_url, es_title = await self.get_page_info(busqueda, "en")
+        # Try to find the page in English first
+        en_url, es_title = await self.get_page_info(search, "en")
 
-        # Si no se encuentra en inglés, intentar en español
+        # If not found in English, try Spanish
         if not en_url:
-            es_url, en_title = await self.get_page_info(busqueda, "es")
+            es_url, en_title = await self.get_page_info(search, "es")
             if es_url:
-                # Si se encontró en español, buscar el equivalente en inglés
+                # If found in Spanish, look for English equivalent
                 en_url, _ = await self.get_page_info(en_title, "en") if en_title else (None, None)
         else:
-            # Si se encontró en inglés, obtener la URL en español
+            # If found in English, get Spanish URL
             es_url, _ = await self.get_page_info(es_title, "es") if es_title else (None, None)
 
-        # Si no se encuentra en ningún idioma, usar URLs de búsqueda
+        # If not found in either language, use search URLs
         if not en_url and not es_url:
-            en_url = f"https://wiki.guildwars2.com/index.php?search={urllib.parse.quote(busqueda)}"
-            es_url = f"https://wiki-es.guildwars2.com/index.php?search={urllib.parse.quote(busqueda)}"
-            description = "No se encontró una coincidencia exacta. Aquí están los resultados de búsqueda:"
+            en_url = f"https://wiki.guildwars2.com/index.php?search={urllib.parse.quote(search)}"
+            es_url = f"https://wiki-es.guildwars2.com/index.php?search={urllib.parse.quote(search)}"
+            description = "No exact match found. Here are the search results:"
         else:
-            description = "Artículos encontrados en ambos idiomas:"
+            description = "Articles found in both languages:"
 
-        # Crear el embed para la respuesta
+        # Create embed for response
         embed = discord.Embed(
-            title=f"Wiki GW2 - {busqueda}",
+            title=f"GW2 Wiki - {search}",
             description=description,
             color=discord.Color.blue()
         )
 
-        # Añadir campos para cada idioma
+        # Add fields for each language
         embed.add_field(
             name="🇬🇧 English Wiki",
             value=f"[Click here]({en_url})",
@@ -111,12 +111,12 @@ class WikiCommand(commands.Cog):
         )
 
         embed.add_field(
-            name="🇪🇸 Wiki en Español",
-            value=f"[Click aquí]({es_url})",
+            name="🇪🇸 Spanish Wiki",
+            value=f"[Click here]({es_url})",
             inline=False
         )
 
-        # Añadir el ícono de GW2 como thumbnail
+        # Add GW2 icon as thumbnail
         embed.set_thumbnail(url="https://wiki.guildwars2.com/images/thumb/9/97/Guild_Wars_2_Dragon_logo.png/120px-Guild_Wars_2_Dragon_logo.png")
 
         await interaction.followup.send(embed=embed)

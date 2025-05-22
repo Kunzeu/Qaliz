@@ -5,83 +5,83 @@ import datetime
 import requests
 
 
-class Fractales(commands.Cog):
+class Fractals(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         # Rotaciones completas (mismo formato que antes)
         self.t4_rotations = [
-            [{"nivel": 96, "nombre": "Pesadilla"}, {"nivel": 86, "nombre": "Ceguera de la Nieve"},
-             {"nivel": 92, "nombre": "Volcánico"}],
-            [{"nivel": 93, "nombre": "Filoetéreo"}, {"nivel": 82, "nombre": "Reactor Thaumanova"},
-             {"nivel": 91, "nombre": "Sin Clasificar"}],
-            [{"nivel": 88, "nombre": "Caos"}, {"nivel": 94, "nombre": "Despeñadero"},
-             {"nivel": 87, "nombre": "Oasis del Crepúsculo"}],
-            [{"nivel": 95, "nombre": "Jefa Capitana Mai Trin"}, {"nivel": 84, "nombre": "Rocahonda"},
-             {"nivel": 99, "nombre": "Oleaje Silencioso"}],
-            [{"nivel": 96, "nombre": "Pesadilla"}, {"nivel": 86, "nombre": "Ceguera de la Nieve"},
-             {"nivel": 80, "nombre": "Océano Sólido"}],
-            [{"nivel": 88, "nombre": "Caos"}, {"nivel": 91, "nombre": "Sin Clasificar"},
-             {"nivel": 85, "nombre": "Campo de Batalla Urbano"}],
-            [{"nivel": 84, "nombre": "Rocahonda"}, {"nivel": 83, "nombre": "Fragua Fundida"},
-             {"nivel": 78, "nombre": "Arrecife de la Sirena"}],
-            [{"nivel": 90, "nombre": "Jefe Fundidos"}, {"nivel": 87, "nombre": "Oasis del Crepúsculo"},
-             {"nivel": 81, "nombre": "Instalación Subterránea"}],
-            [{"nivel": 99, "nombre": "Oleaje Silencioso"}, {"nivel": 77, "nombre": "Cenegal"},
-             {"nivel": 92, "nombre": "Volcánico"}],
-            [{"nivel": 76, "nombre": "Ruinas Acuáticas"}, {"nivel": 100, "nombre": "Torre Solitaria"},
-             {"nivel": 82, "nombre": "Reactor Thaumanova"}],
-            [{"nivel": 98, "nombre": "Pico Sunqua"}, {"nivel": 81, "nombre": "Instalación Subterránea"},
-             {"nivel": 85, "nombre": "Campo de Batalla Urbano"}],
-            [{"nivel": 93, "nombre": "Filoetéreo"}, {"nivel": 88, "nombre": "Caos"},
-             {"nivel": 96, "nombre": "Pesadilla"}],
-            [{"nivel": 94, "nombre": "Desepeñadero"}, {"nivel": 100, "nombre": "Torre Solitaria"},
-             {"nivel": 78, "nombre": "Arrecife de las Sirenas"}],
-            [{"nivel": 84, "nombre": "Rocahonda"}, {"nivel": 80, "nombre": "Océano Sólido"},
-             {"nivel": 89, "nombre": "Cenegal"}],
-            [{"nivel": 95, "nombre": "Jefa Capitana Mai Trin"}, {"nivel": 90, "nombre": "Jefe Fundidos"},
-             {"nivel": 97, "nombre": "Observatorio Asolado"}],
+            [{"level": 96, "name": "Nightmare"}, {"level": 86, "name": "Snowblind"},
+             {"level": 92, "name": "Volcanic"}],
+            [{"level": 93, "name": "Aetherblade"}, {"level": 82, "name": "Thaumanova Reactor"},
+             {"level": 91, "name": "Uncategorized"}],
+            [{"level": 88, "name": "Chaos"}, {"level": 94, "name": "Cliffside"},
+             {"level": 87, "name": "Twilight Oasis"}],
+            [{"level": 95, "name": "Captain Mai Trin Boss"}, {"level": 84, "name": "Deepstone"},
+             {"level": 99, "name": "Silent Surf"}],
+            [{"level": 96, "name": "Nightmare"}, {"level": 86, "name": "Snowblind"},
+             {"level": 80, "name": "Solid Ocean"}],
+            [{"level": 88, "name": "Chaos"}, {"level": 91, "name": "Uncategorized"},
+             {"level": 85, "name": "Urban Battleground"}],
+            [{"level": 84, "name": "Deepstone"}, {"level": 83, "name": "Molten Furnace"},
+             {"level": 78, "name": "Siren's Reef"}],
+            [{"level": 90, "name": "Molten Boss"}, {"level": 87, "name": "Twilight Oasis"},
+             {"level": 81, "name": "Underground Facility"}],
+            [{"level": 99, "name": "Silent Surf"}, {"level": 77, "name": "Swampland"},
+             {"level": 92, "name": "Volcanic"}],
+            [{"level": 76, "name": "Aquatic Ruins"}, {"level": 100, "name": "Lonely Tower"},
+             {"level": 82, "name": "Thaumanova Reactor"}],
+            [{"level": 98, "name": "Sunqua Peak"}, {"level": 81, "name": "Underground Facility"},
+             {"level": 85, "name": "Urban Battleground"}],
+            [{"level": 93, "name": "Aetherblade"}, {"level": 88, "name": "Chaos"},
+             {"level": 96, "name": "Nightmare"}],
+            [{"level": 94, "name": "Cliffside"}, {"level": 100, "name": "Lonely Tower"},
+             {"level": 78, "name": "Siren's Reef"}],
+            [{"level": 84, "name": "Deepstone"}, {"level": 80, "name": "Solid Ocean"},
+             {"level": 89, "name": "Swampland"}],
+            [{"level": 95, "name": "Captain Mai Trin Boss"}, {"level": 90, "name": "Molten Boss"},
+             {"level": 97, "name": "Shattered Observatory"}],
         ]
 
-        self.cm_diarios = [
-            {"nivel": 96, "nombre": "Pesadilla"},
-            {"nivel": 97, "nombre": "Observatorio Asolado"},
-            {"nivel": 98, "nombre": "Pico Sunqua"},
-            {"nivel": 99, "nombre": "Oleaje Silencioso"},
-            {"nivel": 100, "nombre": "Torre Solitaria"},
+        self.daily_cms = [
+            {"level": 96, "name": "Nightmare"},
+            {"level": 97, "name": "Shattered Observatory"},
+            {"level": 98, "name": "Sunqua Peak"},
+            {"level": 99, "name": "Silent Surf"},
+            {"level": 100, "name": "Lonely Tower"},
         ]
-        self.cm_rotations = [self.cm_diarios] * 15
+        self.cm_rotations = [self.daily_cms] * 15
 
-        self.recomendados = [
-            [{"nivel": 2, "nombre": "Sin Clasificar"}, {"nivel": 37, "nombre": "Arrecife de la Sirena"},
-             {"nivel": 53, "nombre": "Instalación Subterránea"}],
-            [{"nivel": 6, "nombre": "Despeñadero"}, {"nivel": 28, "nombre": "Volcánico"},
-             {"nivel": 61, "nombre": "Ruinas Acuáticas"}],
-            [{"nivel": 10, "nombre": "Jefes Fundidos"}, {"nivel": 32, "nombre": "Cenagal"},
-             {"nivel": 65, "nombre": "Filoetéreo"}],
-            [{"nivel": 14, "nombre": "Filoetéreo"}, {"nivel": 34, "nombre": "Reactor Taumanova"},
-             {"nivel": 74, "nombre": "Pico de Sunqua"}],
-            [{"nivel": 19, "nombre": "Volcánico"}, {"nivel": 50, "nombre": "Torre Solitaria"},
-             {"nivel": 57, "nombre": "Campo de Batalla Urbano"}],
-            [{"nivel": 15, "nombre": "Reactor Taumanova"}, {"nivel": 41, "nombre": "Oasis del Crepúsculo"},
-             {"nivel": 60, "nombre": "Océano Sólido"}],
-            [{"nivel": 24, "nombre": "Pico de Sunqua"}, {"nivel": 35, "nombre": "Océano Sólido"},
-             {"nivel": 66, "nombre": "Oleaje Silencioso"}],
-            [{"nivel": 21, "nombre": "Oleaje Silencioso"}, {"nivel": 36, "nombre": "Sin Clasificar"},
-             {"nivel": 75, "nombre": "Torre Solitaria"}],
-            [{"nivel": 12, "nombre": "Arrecife de la Sirena"}, {"nivel": 40, "nombre": "Jefes Fundidos"},
-             {"nivel": 67, "nombre": "Rocahonda"}],
-            [{"nivel": 8, "nombre": "Instalación Subterránea"}, {"nivel": 31, "nombre": "Campo de Batalla Urbano"},
-             {"nivel": 54, "nombre": "Arrecife de la Sirena"}],
-            [{"nivel": 11, "nombre": "Rocahonda"}, {"nivel": 39, "nombre": "Fragua Fundida"},
-             {"nivel": 59, "nombre": "Oasis del Crepúsculo"}],
-            [{"nivel": 18, "nombre": "Jefa Capitana Mai Trin"}, {"nivel": 27, "nombre": "Ceguera de la Nieve"},
-             {"nivel": 64, "nombre": "Reactor Taumanova"}],
-            [{"nivel": 4, "nombre": "Campo de Batalla Urbano"}, {"nivel": 30, "nombre": "Caos"},
-             {"nivel": 58, "nombre": "Fragua Fundida"}],
-            [{"nivel": 16, "nombre": "Oasis del Crepúsculo"}, {"nivel": 42, "nombre": "Jefa Capitana Mai Trin"},
-             {"nivel": 62, "nombre": "Sin Clasificar"}],
-            [{"nivel": 5, "nombre": "Cenagal"}, {"nivel": 47, "nombre": "Pesadilla"},
-             {"nivel": 68, "nombre": "Despeñadero"}],
+        self.recommended = [
+            [{"level": 2, "name": "Uncategorized"}, {"level": 37, "name": "Siren's Reef"},
+             {"level": 53, "name": "Underground Facility"}],
+            [{"level": 6, "name": "Cliffside"}, {"level": 28, "name": "Volcanic"},
+             {"level": 61, "name": "Aquatic Ruins"}],
+            [{"level": 10, "name": "Molten Boss"}, {"level": 32, "name": "Swampland"},
+             {"level": 65, "name": "Aetherblade"}],
+            [{"level": 14, "name": "Aetherblade"}, {"level": 34, "name": "Thaumanova Reactor"},
+             {"level": 74, "name": "Sunqua Peak"}],
+            [{"level": 19, "name": "Volcanic"}, {"level": 50, "name": "Lonely Tower"},
+             {"level": 57, "name": "Urban Battleground"}],
+            [{"level": 15, "name": "Thaumanova Reactor"}, {"level": 41, "name": "Twilight Oasis"},
+             {"level": 60, "name": "Solid Ocean"}],
+            [{"level": 24, "name": "Sunqua Peak"}, {"level": 35, "name": "Solid Ocean"},
+             {"level": 66, "name": "Silent Surf"}],
+            [{"level": 21, "name": "Silent Surf"}, {"level": 36, "name": "Uncategorized"},
+             {"level": 75, "name": "Lonely Tower"}],
+            [{"level": 12, "name": "Siren's Reef"}, {"level": 40, "name": "Molten Boss"},
+             {"level": 67, "name": "Deepstone"}],
+            [{"level": 8, "name": "Underground Facility"}, {"level": 31, "name": "Urban Battleground"},
+             {"level": 54, "name": "Siren's Reef"}],
+            [{"level": 11, "name": "Deepstone"}, {"level": 39, "name": "Molten Furnace"},
+             {"level": 59, "name": "Twilight Oasis"}],
+            [{"level": 18, "name": "Captain Mai Trin Boss"}, {"level": 27, "name": "Snowblind"},
+             {"level": 64, "name": "Thaumanova Reactor"}],
+            [{"level": 4, "name": "Urban Battleground"}, {"level": 30, "name": "Chaos"},
+             {"level": 58, "name": "Molten Furnace"}],
+            [{"level": 16, "name": "Twilight Oasis"}, {"level": 42, "name": "Captain Mai Trin Boss"},
+             {"level": 62, "name": "Uncategorized"}],
+            [{"level": 5, "name": "Swampland"}, {"level": 47, "name": "Nightmare"},
+             {"level": 68, "name": "Cliffside"}],
         ]
 
     def get_fractal_day_index(self):
@@ -101,12 +101,12 @@ class Fractales(commands.Cog):
                     name = achievement.get("name", "")
                     if name.startswith("Daily Fractal: "):
                         fractal_name = name.replace("Daily Fractal: ", "").split(" Tier")[0]
-                        if fractal_name in [f["nombre"] for sublist in self.t4_rotations for f in sublist]:
+                        if fractal_name in [f["name"] for sublist in self.t4_rotations for f in sublist]:
                             fractal_names.append(fractal_name)
 
             # Comparar con las rotaciones para encontrar el día correspondiente
             for i, rotation in enumerate(self.t4_rotations):
-                rotation_names = [f["nombre"] for f in rotation]
+                rotation_names = [f["name"] for f in rotation]
                 if set(fractal_names) == set(rotation_names):
                     return i
 
@@ -145,106 +145,105 @@ class Fractales(commands.Cog):
         current_day_index = (reference_day_index + days_passed) % 15
 
         # Debug info
-        print(f"Fecha actual: {now}")
+        print(f"Current date: {now}")
         print(f"Reset hour: {reset_hour} UTC (7:00 PM Colombia)")
-        print(f"Día de referencia: {reference_date} (Día 5, índice 4)")
-        print(f"Días pasados desde referencia: {days_passed}")
-        print(f"Índice calculado: {current_day_index}")
+        print(f"Reference day: {reference_date} (Day 5, index 4)")
+        print(f"Days passed since reference: {days_passed}")
+        print(f"Calculated index: {current_day_index}")
 
         return current_day_index
 
     def get_reset_date(self, day_offset=0):
         """
-        Devuelve la fecha del reset actual o futura según el offset
-        day_offset: 0 para hoy, 1 para mañana, etc.
+        Returns the current or future reset date based on the offset
+        day_offset: 0 for today, 1 for tomorrow, etc.
         """
         now = datetime.datetime.now(datetime.timezone.utc)
-        reset_hour = 0  # Reset a medianoche UTC (7:00 PM Colombia)
+        reset_hour = 0  # Reset at midnight UTC (7:00 PM Colombia)
 
-        # Determinar si ya pasó el reset de hoy
+        # Determine if today's reset has passed
         if now.hour < reset_hour:
-            # No ha pasado el reset, así que el "reset de hoy" fue ayer
+            # Reset hasn't passed, so "today's reset" was yesterday
             reset_date = now.replace(hour=reset_hour, minute=0, second=0, microsecond=0) - datetime.timedelta(days=1)
         else:
-            # Ya pasó el reset, así que el "reset de hoy" es hoy
+            # Reset has passed, so "today's reset" is today
             reset_date = now.replace(hour=reset_hour, minute=0, second=0, microsecond=0)
 
-        # Añadir el offset de días solicitado
+        # Add the requested day offset
         reset_date += datetime.timedelta(days=day_offset)
 
         return reset_date
 
-    @app_commands.command(name="fractales", description="Muestra los fractales diarios.")
-    @app_commands.choices(día=[
-        app_commands.Choice(name="Hoy", value="hoy"),
-        app_commands.Choice(name="Mañana", value="mañana"),
+    @app_commands.command(name="fractals", description="Shows daily fractals.")
+    @app_commands.choices(day=[
+        app_commands.Choice(name="Today", value="today"),
+        app_commands.Choice(name="Tomorrow", value="tomorrow"),
     ])
-    async def fractales(self, interaction: discord.Interaction, día: str = "hoy"):
+    async def fractals(self, interaction: discord.Interaction, day: str = "today"):
         await interaction.response.defer()
 
-        # Determinar el día
-        if día == "hoy":
+        # Determine the day
+        if day == "today":
             day_offset = 0
-        else:  # mañana
+        else:  # tomorrow
             day_offset = 1
 
-        # Obtener el índice del día actual
+        # Get current day index
         current_day_index = self.get_fractal_day_index()
-        # Ajustar el índice según si es hoy o mañana
+        # Adjust index based on today or tomorrow
         day_index = (current_day_index + day_offset) % 15
 
-        # Mostrar información de diagnóstico en consola para verificar
-        print(f"Día actual index: {current_day_index}, Día mostrado index: {day_index}")
+        # Show diagnostic information in console for verification
+        print(f"Current day index: {current_day_index}, Shown day index: {day_index}")
 
-        # Obtener la fecha correcta basada en el reset
+        # Get correct date based on reset
         reset_date = self.get_reset_date(day_offset)
-        fecha_timestamp = int(reset_date.timestamp())
+        date_timestamp = int(reset_date.timestamp())
 
-        # Crear el embed
+        # Create embed
         embed = discord.Embed(
-            title=f"🌌 Fractales Diarios de Tyria - {'Hoy' if día == 'hoy' else 'Mañana'}",
-            description=f"📅 **Fecha:** <t:{fecha_timestamp}:d>\n Aquí tienes la rotación {'diaria' if día == 'hoy' else 'de mañana'}:",
+            title=f"🌌 Daily Tyrian Fractals - {'Today' if day == 'today' else 'Tomorrow'}",
+            description=f"📅 **Date:** <t:{date_timestamp}:d>\n Here's the {'daily' if day == 'today' else 'tomorrow\'s'} rotation:",
             color=discord.Color.purple()
         )
 
         embed.set_thumbnail(url="https://wiki.guildwars2.com/images/3/38/Daily_Fractals.png")
 
         def format_fractal(f):
-            if "aflicciones" in f:
-                instabs = "\n".join(f"\t↳ {a}" for a in f["aflicciones"])
-                return f"**{f['nivel']} – {f['nombre']}**\n{instabs}"
-            return f"**{f['nivel']} – {f['nombre']}**"
+            if "instabilities" in f:
+                instabs = "\n".join(f"\t↳ {a}" for a in f["instabilities"])
+                return f"**{f['level']} – {f['name']}**\n{instabs}"
+            return f"**{f['level']} – {f['name']}**"
 
-        # Campo para Fractales T4
+        # T4 Fractals field
         if self.t4_rotations[day_index]:
             t4_text = "\n".join(format_fractal(f) for f in self.t4_rotations[day_index])
             embed.add_field(
-                name="<:Daily_Fractals:1368035005569171506> Fractales T4",
+                name="<:Daily_Fractals:1368035005569171506> T4 Fractals",
                 value=t4_text,
                 inline=False
             )
 
-        # Campo para Fractales CM
+        # CM Fractals field
         if self.cm_rotations[day_index]:
             cm_text = "\n".join(format_fractal(f) for f in self.cm_rotations[day_index])
             embed.add_field(
-                name="<:Unstable_Fractal_Essence:1368035017560952952> Fractales CM",
+                name="<:Unstable_Fractal_Essence:1368035017560952952> CM Fractals",
                 value=cm_text,
                 inline=False
             )
 
-        # Campo para Recomendados
-        if self.recomendados[day_index]:
-            rec_text = "\n".join(f"**{f['nivel']} – {f['nombre']}**" for f in self.recomendados[day_index])
+        # Recommended field
+        if self.recommended[day_index]:
+            rec_text = "\n".join(f"**{f['level']} – {f['name']}**" for f in self.recommended[day_index])
             embed.add_field(
-                name="<:Daily_Fractals:1368035005569171506> Recomendados",
+                name="<:Daily_Fractals:1368035005569171506> Recommended",
                 value=rec_text,
                 inline=False
             )
 
-        # Añadir un pie de página con información útil
         await interaction.followup.send(embed=embed)
 
 
 async def setup(bot):
-    await bot.add_cog(Fractales(bot))
+    await bot.add_cog(Fractals(bot))

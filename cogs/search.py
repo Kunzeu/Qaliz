@@ -8,7 +8,7 @@ from typing import List, Dict, Any, Optional, Set
 from utils.database import dbManager
 from datetime import datetime
 
-# Configurar logging para depuración
+# Configure logging for debugging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -17,100 +17,35 @@ class SearchCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    async def item_name_autocomplete(
-            self,
-            interaction: discord.Interaction,
-            current: str
-    ) -> List[app_commands.Choice[str]]:
-        """Función de autocompletado para nombres de items"""
-        if not current:
-            return []
-
-        # Obtener la API key del usuario
-        user_id = str(interaction.user.id)
-        api_key = await dbManager.getApiKey(user_id)
-
-        if not api_key:
-            return [app_commands.Choice(name="Necesitas configurar una API key primero", value="no_api_key")]
-
-        try:
-            async with aiohttp.ClientSession() as session:
-                # Primero obtenemos una página de IDs de items
-                async with session.get(
-                        f"https://api.guildwars2.com/v2/items?page=0&page_size=200"
-                ) as response:
-                    if response.status != 200:
-                        return []
-
-                    item_ids = await response.json()
-
-                    # Luego obtenemos los detalles de esos items
-                    ids_param = ",".join(map(str, item_ids))
-                    async with session.get(
-                            f"https://api.guildwars2.com/v2/items?ids={ids_param}&lang=es"
-                    ) as details_response:
-                        if details_response.status != 200:
-                            return []
-
-                        items = await details_response.json()
-                        matches = []
-                        current_lower = current.lower()
-
-                        for item in items:
-                            if current_lower in item['name'].lower():
-                                matches.append(
-                                    app_commands.Choice(
-                                        name=f"{item['name']} ({item['rarity']})",
-                                        value=item['name']
-                                    )
-                                )
-                                if len(matches) >= 25:
-                                    break
-
-                        return matches
-
-        except Exception as e:
-            logger.error(f"Error en autocompletado: {str(e)}")
-            return []
-
-        return []
-
     @app_commands.command(
         name="search",
-        description="Busca un item en todos los personajes, banco, almacenamiento y casillas compartidas de tu cuenta"
+        description="Search for an item across all characters, bank, material storage, and shared inventory slots"
     )
     @app_commands.describe(
-        item_name="Nombre del item a buscar"
+        item_name="Name of the item to search for"
     )
-    @app_commands.autocomplete(item_name=item_name_autocomplete)
     async def search(
             self,
             interaction: discord.Interaction,
             item_name: str
     ):
-        # Si el usuario seleccionó la opción que indica que necesita una API key
-        if item_name == "no_api_key":
-            await interaction.response.send_message(
-                "⚠️ No tienes una API key configurada. Usa `/apikey add` para añadir una.", ephemeral=True)
-            return
-
         await interaction.response.defer(thinking=True)
 
-        # Obtener la API key del usuario
+        # Get user's API key
         user_id = str(interaction.user.id)
         api_key = await dbManager.getApiKey(user_id)
 
         if not api_key:
-            await interaction.followup.send("⚠️ No tienes una API key configurada. Usa `/apikey add` para añadir una.")
+            await interaction.followup.send("⚠️ You don't have an API key configured. Use `/apikey add` to add one.")
             return
 
         try:
             search_term_lower = item_name.lower()
 
-            # Obtener el nombre de la cuenta
+            # Get account name
             account_name = await self._get_account_name(api_key)
 
-            # Verificar permisos de API
+            # Verify API permissions
             permissions = await self.get_api_permissions(api_key)
             has_characters_access = "characters" in permissions
             has_inventories_access = "inventories" in permissions
@@ -118,73 +53,71 @@ class SearchCog(commands.Cog):
 
             if not has_characters_access and not has_inventories_access:
                 await interaction.followup.send(
-                    "⚠️ Tu API key no tiene los permisos necesarios para ver personajes ni inventario.")
+                    "⚠️ Your API key doesn't have the necessary permissions to view characters or inventory.")
                 return
 
-            # Configuración de tareas
+            # Configure tasks
             tasks = []
 
-            # Tarea para buscar en personajes
+            # Task to search in characters
             if has_characters_access:
                 characters = await self._get_characters(api_key)
                 if characters:
                     tasks.append(self.search_item_in_characters(api_key, characters, search_term_lower))
                 else:
-                    tasks.append(asyncio.create_task(asyncio.sleep(0)))  # Tarea nula
+                    tasks.append(asyncio.create_task(asyncio.sleep(0)))  # Null task
             else:
-                tasks.append(asyncio.create_task(asyncio.sleep(0)))  # Tarea nula
+                tasks.append(asyncio.create_task(asyncio.sleep(0)))  # Null task
 
-            # Tarea para buscar en banco
+            # Task to search in bank
             if has_inventories_access:
                 tasks.append(self.search_item_in_bank(api_key, search_term_lower))
             else:
-                tasks.append(asyncio.create_task(asyncio.sleep(0)))  # Tarea nula
+                tasks.append(asyncio.create_task(asyncio.sleep(0)))  # Null task
 
-            # Tarea para buscar en almacenamiento de materiales
+            # Task to search in material storage
             if has_inventories_access:
                 tasks.append(self.search_item_in_materials(api_key, search_term_lower))
             else:
-                tasks.append(asyncio.create_task(asyncio.sleep(0)))  # Tarea nula
+                tasks.append(asyncio.create_task(asyncio.sleep(0)))  # Null task
 
-            # Tarea para buscar en casillas compartidas
+            # Task to search in shared slots
             if has_inventories_access:
                 tasks.append(self.search_item_in_shared_slots(api_key, search_term_lower))
             else:
-                tasks.append(asyncio.create_task(asyncio.sleep(0)))  # Tarea nula
+                tasks.append(asyncio.create_task(asyncio.sleep(0)))  # Null task
 
-            # Esperar resultados
+            # Wait for results
             results_list = await asyncio.gather(*tasks)
             char_results = results_list[0] if has_characters_access and characters else {}
             bank_results = results_list[1] if has_inventories_access else []
             material_results = results_list[2] if has_inventories_access else []
             shared_results = results_list[3] if has_inventories_access else []
 
-            # Combinar resultados
+            # Combine results
             results = {
-                "personajes": char_results,
-                "banco": bank_results,
-                "materiales": material_results,
-                "compartidos": shared_results
+                "characters": char_results,
+                "bank": bank_results,
+                "materials": material_results,
+                "shared": shared_results
             }
 
             if not char_results and not bank_results and not material_results and not shared_results:
                 await interaction.followup.send(
-                    f"🔍 No se encontró ningún item que coincida con '{item_name}'."
+                    f"🔍 No items found matching '{item_name}'."
                 )
                 return
 
-            # Formatear resultados
+            # Format results
             embed = self.format_search_results(item_name, results, account_name)
             await interaction.followup.send(embed=embed)
 
         except Exception as error:
-            logger.error(f"Error durante la búsqueda: {str(error)}")
-            await interaction.followup.send(f"❌ Ocurrió un error al buscar: {str(error)}")
-
-    # El resto de métodos se mantienen iguales que en tu código original
+            logger.error(f"Error during search: {str(error)}")
+            await interaction.followup.send(f"❌ An error occurred while searching: {str(error)}")
 
     async def get_api_permissions(self, api_key: str) -> List[str]:
-        """Verifica los permisos de la API key"""
+        """Verify API key permissions"""
         async with aiohttp.ClientSession() as session:
             async with session.get(f"https://api.guildwars2.com/v2/tokeninfo?access_token={api_key}") as response:
                 if response.status != 200:
@@ -193,16 +126,16 @@ class SearchCog(commands.Cog):
                 return token_info.get('permissions', [])
 
     async def _get_account_name(self, api_key: str) -> str:
-        """Obtiene el nombre de la cuenta"""
+        """Get account name"""
         async with aiohttp.ClientSession() as session:
             async with session.get(f"https://api.guildwars2.com/v2/account?access_token={api_key}") as response:
                 if response.status != 200:
-                    return "Cuenta desconocida"
+                    return "Unknown Account"
                 account_data = await response.json()
-                return account_data.get('name', 'Cuenta desconocida')
+                return account_data.get('name', 'Unknown Account')
 
     async def _get_characters(self, api_key: str) -> List[str]:
-        """Obtiene la lista de personajes de la cuenta"""
+        """Get list of account characters"""
         async with aiohttp.ClientSession() as session:
             async with session.get(f"https://api.guildwars2.com/v2/characters?access_token={api_key}") as response:
                 if response.status != 200:
@@ -210,7 +143,7 @@ class SearchCog(commands.Cog):
                 return await response.json()
 
     async def _get_character_inventories(self, api_key: str, character_names: List[str]) -> Dict[str, Dict]:
-        """Obtiene los inventarios de múltiples personajes en paralelo"""
+        """Get inventories of multiple characters in parallel"""
         tasks = []
         for name in character_names:
             tasks.append(self._get_character_inventory(api_key, name))
@@ -219,7 +152,7 @@ class SearchCog(commands.Cog):
         return {name: inv for name, inv in zip(character_names, results)}
 
     async def _get_character_inventory(self, api_key: str, character_name: str) -> Dict[str, Any]:
-        """Obtiene el inventario completo de un personaje"""
+        """Get complete inventory of a character"""
         async with aiohttp.ClientSession() as session:
             async with session.get(
                     f"https://api.guildwars2.com/v2/characters/{character_name}/inventory?access_token={api_key}"
@@ -229,7 +162,7 @@ class SearchCog(commands.Cog):
                 return await response.json()
 
     async def _get_bank_content(self, api_key: str) -> List[Dict]:
-        """Obtiene el contenido del banco"""
+        """Get bank contents"""
         async with aiohttp.ClientSession() as session:
             async with session.get(f"https://api.guildwars2.com/v2/account/bank?access_token={api_key}") as response:
                 if response.status != 200:
@@ -237,7 +170,7 @@ class SearchCog(commands.Cog):
                 return await response.json()
 
     async def _get_materials(self, api_key: str) -> List[Dict]:
-        """Obtiene el almacenamiento de materiales"""
+        """Get material storage contents"""
         async with aiohttp.ClientSession() as session:
             async with session.get(
                     f"https://api.guildwars2.com/v2/account/materials?access_token={api_key}") as response:
@@ -246,7 +179,7 @@ class SearchCog(commands.Cog):
                 return await response.json()
 
     async def _get_shared_inventory(self, api_key: str) -> List[Dict]:
-        """Obtiene el contenido de las casillas compartidas"""
+        """Get shared inventory slots contents"""
         async with aiohttp.ClientSession() as session:
             async with session.get(
                     f"https://api.guildwars2.com/v2/account/inventory?access_token={api_key}") as response:
@@ -255,7 +188,7 @@ class SearchCog(commands.Cog):
                 return await response.json()
 
     async def _get_item_details(self, api_key: str, item_ids: Set[int]) -> Dict[int, Dict]:
-        """Obtiene detalles de los items por sus IDs en español e inglés"""
+        """Get item details by their IDs in both English and Spanish"""
         if not item_ids:
             return {}
 
@@ -263,7 +196,7 @@ class SearchCog(commands.Cog):
         chunks = [list(item_ids)[i:i + 50] for i in range(0, len(item_ids), 50)]
 
         async with aiohttp.ClientSession() as session:
-            # Obtener detalles en inglés
+            # Get details in English
             tasks = []
             for chunk in chunks:
                 ids_param = ",".join(map(str, chunk))
@@ -281,7 +214,7 @@ class SearchCog(commands.Cog):
                             result[item_id] = item
                         result[item_id]['name_en'] = item['name']
 
-            # Obtener detalles en español
+            # Get details in Spanish
             tasks = []
             for chunk in chunks:
                 ids_param = ",".join(map(str, chunk))
@@ -296,32 +229,33 @@ class SearchCog(commands.Cog):
                     for item in items:
                         item_id = item['id']
                         if item_id in result:
-                            result[item_id]['name'] = item['name']  # nombre en español por defecto
                             result[item_id]['name_es'] = item['name']
+                            # Use Spanish name as default display name
+                            result[item_id]['name'] = item['name']
 
         return result
 
     async def search_item_in_characters(self, api_key: str, characters: List[str], search_term: str) -> Dict[str, List]:
-        """Busca un item en todos los personajes por nombre (parcial) y consolida resultados por personaje"""
+        """Search for an item in all characters by name (partial) and consolidate results by character"""
         results = {}
-        character_items = {}  # Estructura: {character_name: {item_id: count}}
+        character_items = {}  # Structure: {character_name: {item_id: count}}
 
-        # Obtener inventarios de todos los personajes en paralelo
+        # Get inventories of all characters in parallel
         inventories = await self._get_character_inventories(api_key, characters)
 
-        # Recopilar y consolidar items por personaje
+        # Collect and consolidate items by character
         for character_name, inventory in inventories.items():
             if not inventory or 'bags' not in inventory:
                 continue
 
             character_items[character_name] = {}
 
-            # Procesar cada bolsa
+            # Process each bag
             for bag in inventory.get('bags', []):
                 if not bag or 'inventory' not in bag:
                     continue
 
-                # Procesar cada slot en la bolsa
+                # Process each slot in the bag
                 for item in bag.get('inventory', []):
                     if not item:
                         continue
@@ -335,24 +269,28 @@ class SearchCog(commands.Cog):
 
                         character_items[character_name][item_id] += count
 
-        # Obtener todos los item_ids únicos
+        # Get all unique item_ids
         all_item_ids = set()
         for character, items in character_items.items():
             all_item_ids.update(items.keys())
 
-        # Obtener detalles de todos los items encontrados
+        # Get details of all found items
         item_details = await self._get_item_details(api_key, all_item_ids)
 
-        # Filtrar items que coinciden con el nombre buscado y armar resultados consolidados
+        # Filter items that match the search name in either language
         for character_name, items in character_items.items():
             for item_id, count in items.items():
                 item_data = item_details.get(item_id)
-                if item_data and search_term in item_data.get('name', '').lower():
+                if item_data and (
+                    search_term in item_data.get('name_es', '').lower() or 
+                    search_term in item_data.get('name_en', '').lower()
+                ):
                     if character_name not in results:
                         results[character_name] = []
 
                     results[character_name].append({
-                        'name': item_data.get('name'),
+                        'name': item_data.get('name'),  # Spanish name by default
+                        'name_en': item_data.get('name_en'),  # English name
                         'count': count,
                         'rarity': item_data.get('rarity'),
                         'icon': item_data.get('icon')
@@ -361,14 +299,14 @@ class SearchCog(commands.Cog):
         return results
 
     async def search_item_in_bank(self, api_key: str, search_term: str) -> List[Dict]:
-        """Busca un item en el banco por nombre (parcial)"""
+        """Search for an item in the bank by name (partial)"""
         results = []
         bank_items = {}
 
-        # Obtener contenido del banco
+        # Get bank contents
         bank_content = await self._get_bank_content(api_key)
 
-        # Recopilar IDs de items del banco, SUMANDO las cantidades
+        # Collect item IDs from bank, ADDING quantities
         for slot in bank_content:
             if not slot:
                 continue
@@ -380,14 +318,16 @@ class SearchCog(commands.Cog):
                 else:
                     bank_items[item_id] = slot.get('count', 1)
 
-        # Obtener detalles de todos los items encontrados
+        # Get details of all found items
         item_details = await self._get_item_details(api_key, set(bank_items.keys()))
 
-        # Filtrar items que coinciden con el nombre buscado
+        # Filter items that match the search name in either language
         for item_id, item_data in item_details.items():
-            if search_term in item_data.get('name', '').lower():
+            if (search_term in item_data.get('name_es', '').lower() or 
+                search_term in item_data.get('name_en', '').lower()):
                 results.append({
-                    'name': item_data.get('name'),
+                    'name': item_data.get('name'),  # Spanish name by default
+                    'name_en': item_data.get('name_en'),  # English name
                     'count': bank_items[item_id],
                     'rarity': item_data.get('rarity'),
                     'icon': item_data.get('icon')
@@ -396,13 +336,14 @@ class SearchCog(commands.Cog):
         return results
 
     async def search_item_in_materials(self, api_key: str, search_term: str) -> List[Dict]:
-        """Busca un item en el almacenamiento de materiales por nombre (parcial)"""
+        """Search for an item in material storage by name (partial)"""
         results = []
         material_items = {}
 
-        # Obtener contenido del almacenamiento de materiales
+        # Get material storage contents
         materials = await self._get_materials(api_key)
-        # Recopilar IDs de materiales, SUMANDO si hay duplicados
+        
+        # Collect material IDs, ADDING if duplicates
         for slot in materials:
             if not slot or slot.get('count', 0) <= 0:
                 continue
@@ -414,14 +355,16 @@ class SearchCog(commands.Cog):
                 else:
                     material_items[item_id] = slot.get('count', 1)
 
-        # Obtener detalles de todos los materiales encontrados
+        # Get details of all found materials
         item_details = await self._get_item_details(api_key, set(material_items.keys()))
 
-        # Filtrar materiales que coinciden con el nombre buscado
+        # Filter materials that match the search name in either language
         for item_id, item_data in item_details.items():
-            if search_term in item_data.get('name', '').lower():
+            if (search_term in item_data.get('name_es', '').lower() or 
+                search_term in item_data.get('name_en', '').lower()):
                 results.append({
-                    'name': item_data.get('name'),
+                    'name': item_data.get('name'),  # Spanish name by default
+                    'name_en': item_data.get('name_en'),  # English name
                     'count': material_items[item_id],
                     'rarity': item_data.get('rarity'),
                     'icon': item_data.get('icon')
@@ -430,14 +373,14 @@ class SearchCog(commands.Cog):
         return results
 
     async def search_item_in_shared_slots(self, api_key: str, search_term: str) -> List[Dict]:
-        """Busca un item en las casillas compartidas por nombre (parcial)"""
+        """Search for an item in shared slots by name (partial)"""
         results = []
         shared_items = {}
 
-        # Obtener contenido de las casillas compartidas
+        # Get shared slots contents
         shared_inventory = await self._get_shared_inventory(api_key)
 
-        # Recopilar IDs de items, SUMANDO si hay duplicados
+        # Collect item IDs, ADDING if duplicates
         for slot in shared_inventory:
             if not slot:
                 continue
@@ -449,14 +392,16 @@ class SearchCog(commands.Cog):
                 else:
                     shared_items[item_id] = slot.get('count', 1)
 
-        # Obtener detalles de todos los items encontrados
+        # Get details of all found items
         item_details = await self._get_item_details(api_key, set(shared_items.keys()))
 
-        # Filtrar items que coinciden con el nombre buscado
+        # Filter items that match the search name in either language
         for item_id, item_data in item_details.items():
-            if search_term in item_data.get('name', '').lower():
+            if (search_term in item_data.get('name_es', '').lower() or 
+                search_term in item_data.get('name_en', '').lower()):
                 results.append({
-                    'name': item_data.get('name'),
+                    'name': item_data.get('name'),  # Spanish name by default
+                    'name_en': item_data.get('name_en'),  # English name
                     'count': shared_items[item_id],
                     'rarity': item_data.get('rarity'),
                     'icon': item_data.get('icon')
@@ -465,7 +410,7 @@ class SearchCog(commands.Cog):
         return results
 
     def format_search_results(self, search_term: str, results: Dict, account_name: str) -> discord.Embed:
-        """Formatea los resultados de búsqueda en un embed mejorado"""
+        """Format search results in an enhanced embed"""
         embed = discord.Embed(
             description=f"{account_name}\n**{search_term}**",
             color=discord.Color.blue(),
@@ -476,13 +421,14 @@ class SearchCog(commands.Cog):
         locations_counter = 0
         item_icon_url = None
 
-        # Procesar items en personajes
-        for character, items in results["personajes"].items():
+        # Process character items
+        for character, items in results["characters"].items():
             item_text = ""
             character_total = 0
 
             for item in items:
-                item_text += f"- **{item['name']}** ×{item['count']}\n"
+                # Use English name
+                item_text += f"- **{item['name_en']}** ×{item['count']}\n"
                 character_total += item['count']
                 total_items += item['count']
                 if item_icon_url is None:
@@ -496,13 +442,13 @@ class SearchCog(commands.Cog):
                 )
                 locations_counter += 1
 
-        # Procesar items en banco
-        if results["banco"]:
+        # Process bank items
+        if results["bank"]:
             bank_text = ""
             bank_total = 0
 
-            for item in results["banco"]:
-                bank_text += f"- **{item['name']}** ×{item['count']}\n"
+            for item in results["bank"]:
+                bank_text += f"- **{item['name_en']}** ×{item['count']}\n"
                 bank_total += item['count']
                 total_items += item['count']
                 if item_icon_url is None:
@@ -510,19 +456,19 @@ class SearchCog(commands.Cog):
 
             if bank_text:
                 embed.add_field(
-                    name=f"<:Bank:1360790407545356488> Banco",
+                    name=f"<:Bank:1360790407545356488> Bank",
                     value=bank_text,
                     inline=False
                 )
                 locations_counter += 1
 
-        # Procesar items en almacenamiento de materiales
-        if results["materiales"]:
+        # Process material storage items
+        if results["materials"]:
             materials_text = ""
             materials_total = 0
 
-            for item in results["materiales"]:
-                materials_text += f"- **{item['name']}** ×{item['count']}\n"
+            for item in results["materials"]:
+                materials_text += f"- **{item['name_en']}** ×{item['count']}\n"
                 materials_total += item['count']
                 total_items += item['count']
                 if item_icon_url is None:
@@ -530,19 +476,19 @@ class SearchCog(commands.Cog):
 
             if materials_text:
                 embed.add_field(
-                    name=f"<:MaterialStorageExpander:1360795006985830430> Almacenamiento",
+                    name=f"<:MaterialStorageExpander:1360795006985830430> Material Storage",
                     value=materials_text,
                     inline=False
                 )
                 locations_counter += 1
 
-        # Procesar items en casillas compartidas
-        if results["compartidos"]:
+        # Process shared slots items
+        if results["shared"]:
             shared_text = ""
             shared_total = 0
 
-            for item in results["compartidos"]:
-                shared_text += f"- **{item['name']}** ×{item['count']}\n"
+            for item in results["shared"]:
+                shared_text += f"- **{item['name_en']}** ×{item['count']}\n"
                 shared_total += item['count']
                 total_items += item['count']
                 if item_icon_url is None:
@@ -550,45 +496,45 @@ class SearchCog(commands.Cog):
 
             if shared_text:
                 embed.add_field(
-                    name=f"<:Shared_Inventory_Slot:1363372410958643302> Casillas Compartidas",
+                    name=f"<:Shared_Inventory_Slot:1363372410958643302> Shared Slots",
                     value=shared_text,
                     inline=False
                 )
                 locations_counter += 1
 
-        # Texto para el footer
+        # Footer text
         locations_text = []
-        if results["personajes"]:
-            locations_text.append(f"{len(results['personajes'])} personajes")
-        if results["banco"]:
-            locations_text.append("banco")
-        if results["materiales"]:
-            locations_text.append("almacenamiento")
-        if results["compartidos"]:
-            locations_text.append("casillas compartidas")
+        if results["characters"]:
+            locations_text.append(f"{len(results['characters'])} characters")
+        if results["bank"]:
+            locations_text.append("bank")
+        if results["materials"]:
+            locations_text.append("material storage")
+        if results["shared"]:
+            locations_text.append("shared slots")
 
-        locations_str = ", ".join(locations_text) if locations_text else "ninguna ubicación"
+        locations_str = ", ".join(locations_text) if locations_text else "no locations"
 
         embed.add_field(
-            name=f"**Total: {total_items} items en {locations_str}**",
+            name=f"**Total: {total_items} items in {locations_str}**",
             value="",
             inline=False
         )
 
-        embed.set_footer(text=f"Resultados de búsqueda en {locations_counter} ubicaciones")
+        embed.set_footer(text=f"Search results in {locations_counter} locations")
 
-        # Añadir un color de borde basado en la rareza más alta encontrada
+        # Add border color based on highest rarity found
         highest_rarity = self.get_highest_rarity(results)
         embed.color = self.get_rarity_color(highest_rarity)
 
-        # Añadir icono del item si se encontró alguno
+        # Add item icon if one was found
         if item_icon_url:
             embed.set_thumbnail(url=item_icon_url)
 
         return embed
 
     def get_highest_rarity(self, results: Dict) -> str:
-        """Encuentra la rareza más alta entre todos los items encontrados"""
+        """Find the highest rarity among all found items"""
         rarity_order = {
             'Junk': 0,
             'Basic': 1,
@@ -600,29 +546,29 @@ class SearchCog(commands.Cog):
             'Legendary': 7
         }
 
-        highest = 'Basic'  # Valor por defecto
+        highest = 'Basic'  # Default value
 
-        # Revisar personajes
-        for character, items in results["personajes"].items():
+        # Check characters
+        for character, items in results["characters"].items():
             for item in items:
                 item_rarity = item.get('rarity', 'Basic')
                 if rarity_order.get(item_rarity, 0) > rarity_order.get(highest, 0):
                     highest = item_rarity
 
-        # Revisar banco
-        for item in results["banco"]:
+        # Check bank
+        for item in results["bank"]:
             item_rarity = item.get('rarity', 'Basic')
             if rarity_order.get(item_rarity, 0) > rarity_order.get(highest, 0):
                 highest = item_rarity
 
-        # Revisar materiales
-        for item in results["materiales"]:
+        # Check materials
+        for item in results["materials"]:
             item_rarity = item.get('rarity', 'Basic')
             if rarity_order.get(item_rarity, 0) > rarity_order.get(highest, 0):
                 highest = item_rarity
 
-        # Revisar casillas compartidas
-        for item in results["compartidos"]:
+        # Check shared slots
+        for item in results["shared"]:
             item_rarity = item.get('rarity', 'Basic')
             if rarity_order.get(item_rarity, 0) > rarity_order.get(highest, 0):
                 highest = item_rarity
@@ -630,7 +576,7 @@ class SearchCog(commands.Cog):
         return highest
 
     def get_rarity_color(self, rarity: str) -> discord.Color:
-        """Retorna un color de Discord según la rareza del item"""
+        """Return a Discord color based on item rarity"""
         colors = {
             'Junk': discord.Color.light_gray(),
             'Basic': discord.Color.light_gray(),
@@ -645,6 +591,6 @@ class SearchCog(commands.Cog):
 
 
 async def setup(bot):
-    """Función para registrar el cog en el bot"""
+    """Function to register the cog in the bot"""
     await bot.add_cog(SearchCog(bot))
-    print("✅ Cog de búsqueda unificado con autocompletado cargado")
+    print("✅ Search cog loaded")

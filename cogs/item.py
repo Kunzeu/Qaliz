@@ -249,8 +249,10 @@ ITEMS_MAP = {
     24467: {"mainName": "Tiger's Eye Pebble", "altNames": ["Guijarro de ojo de tigre", "Guijarro", "tigre"]},
     13417: {"mainName": "Ruby Orichalcum Ring", "altNames": ["Ruby", "Anillo de oricalco y rubí", "anillo", "Ring"]},
     13501: {"mainName": "Ruby Orichalcum Amulet", "alNames": ["Amulet", "Amuleto", "Amuleto de oricalco y rubí"]},
-    13459: {"mainName": "Ruby Orichalcum Earring", "altNames": ["Pendiente de oricalco y rubí", "Pendiente", "Earring"]}
-    # ... (rest of the item mappings) ...
+    13459: {"mainName": "Ruby Orichalcum Earring", "altNames": ["Pendiente de oricalco y rubí", "Pendiente", "Earring"]},
+    104282:{"mainName": "Shard of Mistburned Barrens", "altNames": ["Esquirla de los Yermos de Pavesas de Niebla", "Yermos", "Barrens", "Pavesas", "Mistburned"]},
+
+    
 }
 
 

@@ -1,5 +1,5 @@
 from discord.ext import commands, tasks
-from datetime import datetime
+from datetime import datetime, timedelta
 import pytz
 import discord
 from utils.database import dbManager
@@ -123,6 +123,19 @@ class Reminder(commands.Cog):
             await ctx.send("❌ Hubo un error al configurar el mensaje")
 
     @commands.has_permissions(administrator=True)
+    @commands.command(name="setrol")
+    async def set_role(self, ctx, role: discord.Role):
+        guild_id = str(ctx.guild.id)
+        reminder_data = await self.get_or_create_reminder(guild_id)
+        reminder_data['role_id'] = role.id
+        reminder_data['updated_at'] = datetime.now()
+        success = await self.db.setReminder(guild_id, reminder_data)
+        if success:
+            await ctx.send(f"✅ Rol de mención establecido a {role.mention}")
+        else:
+            await ctx.send("❌ Hubo un error al configurar el rol")
+
+    @commands.has_permissions(administrator=True)
     @commands.command(name="config")
     async def view_config(self, ctx):
         guild_id = str(ctx.guild.id)
@@ -185,8 +198,37 @@ class Reminder(commands.Cog):
     @tasks.loop(minutes=1)
     async def reminder(self):
         reminders = await self.db.get_all_reminders()
+        now = datetime.now(self.tz_col)
         for reminder in reminders:
+            # Obtener la última vez que se envió el recordatorio
+            last_sent = reminder.get('last_sent')
+            if last_sent:
+                try:
+                    last_sent_dt = datetime.fromisoformat(last_sent)
+                except Exception:
+                    last_sent_dt = None
+            else:
+                last_sent_dt = None
+
+            # Si es la primera vez o han pasado más de 59 segundos desde el último envío
+            should_send = False
             if self.is_reminder_time(reminder):
+                if not last_sent_dt or (now - last_sent_dt).total_seconds() > 59:
+                    should_send = True
+            # Si el bot estuvo caído, verificar si debió enviarse en el intervalo
+            elif last_sent_dt and (now - last_sent_dt).total_seconds() > 60:
+                # Revisar si entre last_sent y ahora hubo un momento que coincidía con el recordatorio
+                check_time = last_sent_dt + timedelta(minutes=1)
+                while check_time <= now:
+                    temp_reminder = reminder.copy()
+                    # Simular el tiempo para is_reminder_time
+                    temp_reminder['__now'] = check_time
+                    if self.is_reminder_time_with_time(temp_reminder, check_time):
+                        should_send = True
+                        break
+                    check_time += timedelta(minutes=1)
+
+            if should_send:
                 channel_id = reminder.get('channel_id')
                 role_id = reminder.get('role_id')
                 message = reminder.get('message', "Hoy se reinicia la semana. ¡Recuerda comprar tus ASS!")
@@ -195,6 +237,21 @@ class Reminder(commands.Cog):
                     if channel:
                         role_mention = f"<@&{role_id}>" if role_id else ""
                         await channel.send(f"{message} {role_mention}")
+                        # Actualizar last_sent
+                        reminder['last_sent'] = now.isoformat()
+                        await self.db.setReminder(reminder.get('guild_id'), reminder)
+
+    def is_reminder_time_with_time(self, reminder_config, now):
+        # Igual que is_reminder_time pero usando un tiempo dado
+        is_weekly = reminder_config.get('day_of_month') is None
+        if is_weekly:
+            return (now.weekday() == reminder_config.get('day', 0) and 
+                    now.hour == reminder_config.get('hour', 2) and 
+                    now.minute == reminder_config.get('minute', 0))
+        else:
+            return (now.day == reminder_config.get('day_of_month') and 
+                    now.hour == reminder_config.get('hour', 2) and 
+                    now.minute == reminder_config.get('minute', 0))
 
     @reminder.before_loop
     async def before_reminder(self):

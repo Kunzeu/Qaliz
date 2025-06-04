@@ -160,7 +160,7 @@ class WalletCog(commands.Cog):
                 70: "<:LegendaryInsight:1356712898252243135>",
                 73: "<:PinchofStardust:1356723379989909514>",
                 75: "<:CalcifiedGasp:1356723611926532107>",
-                76: "<:UrsusOblige:1356826426157961233>"
+                76: "<:UrsusOblige:1356826426157961233>",
                 77: "<:GaetingCrystal:1379659919124594720>",
                 78: "<:FineRiftEssence:1379660071650332853>",
                 79: "<:RareRiftEssence:1379660242538987656>>",

@@ -163,7 +163,7 @@ class WalletCog(commands.Cog):
                 76: "<:UrsusOblige:1356826426157961233>",
                 77: "<:GaetingCrystal:1379659919124594720>",
                 78: "<:FineRiftEssence:1379660071650332853>",
-                79: "<:RareRiftEssence:1379660242538987656>>",
+                79: "<:RareRiftEssence:1379660242538987656>",
                 80: "<:MasterworkRiftEssence:1379660354967044106>"
                 
             }

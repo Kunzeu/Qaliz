@@ -3,20 +3,19 @@ from datetime import datetime
 import discord
 from discord.ext import commands
 
-
 class GuildConfig:
     def __init__(self, guild_id: int, admin_roles: List[int] = None, mod_roles: List[int] = None):
         self.guild_id = guild_id
         self.admin_roles = admin_roles or []
         self.mod_roles = mod_roles or []
-
+    
     def to_dict(self) -> Dict[str, Any]:
         return {
             "guild_id": self.guild_id,
             "admin_roles": self.admin_roles,
             "mod_roles": self.mod_roles
         }
-
+    
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'GuildConfig':
         return cls(
@@ -24,7 +23,6 @@ class GuildConfig:
             admin_roles=data.get("admin_roles", []),
             mod_roles=data.get("mod_roles", [])
         )
-
 
 class CustomCommand:
     def __init__(self, name: str, response: str, guild_id: int, created_by: int, category: str = "General"):
@@ -36,7 +34,7 @@ class CustomCommand:
         self.last_modified = datetime.now()
         self.aliases: Set[str] = set()
         self.category = category
-
+        
     def to_dict(self) -> Dict[str, Any]:
         return {
             "name": self.name,
@@ -48,7 +46,7 @@ class CustomCommand:
             "aliases": list(self.aliases),
             "category": self.category
         }
-
+    
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'CustomCommand':
         cmd = cls(
@@ -63,7 +61,6 @@ class CustomCommand:
         cmd.aliases = set(data.get("aliases", []))
         return cmd
 
-
 class CommandManager(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
@@ -73,11 +70,11 @@ class CommandManager(commands.Cog):
         self.guild_configs_collection = self.db.collection('guild_configs')
         # Cache en memoria
         self.guild_commands = {}  # {guild_id: {command_name: Command}}
-        self.guild_aliases = {}  # {guild_id: {alias: command_name}}
-        self.guild_configs = {}  # {guild_id: GuildConfig}
+        self.guild_aliases = {}   # {guild_id: {alias: command_name}}
+        self.guild_configs = {}   # {guild_id: GuildConfig}
         # Cargar datos al iniciar
         self._load_data()
-
+    
     def _load_data(self):
         """Carga comandos y configuraciones desde Firestore"""
         try:
@@ -87,25 +84,25 @@ class CommandManager(commands.Cog):
                 config_data = config_doc.to_dict()
                 config = GuildConfig.from_dict(config_data)
                 self.guild_configs[config.guild_id] = config
-
+            
             # Cargar comandos y alias
             commands = self.commands_collection.stream()
             for cmd_doc in commands:
                 cmd_data = cmd_doc.to_dict()
                 command = CustomCommand.from_dict(cmd_data)
                 guild_id = command.guild_id
-
+                
                 # Inicializar diccionarios si no existen
                 if guild_id not in self.guild_commands:
                     self.guild_commands[guild_id] = {}
                 if guild_id not in self.guild_aliases:
                     self.guild_aliases[guild_id] = {}
-
+                
                 # Agregar comando y sus alias
                 self.guild_commands[guild_id][command.name] = command
                 for alias in command.aliases:
                     self.guild_aliases[guild_id][alias] = command.name
-
+                    
             print("✅ Comandos y configuraciones cargados exitosamente")
         except Exception as e:
             print(f"❌ Error cargando datos: {e}")
@@ -115,13 +112,13 @@ class CommandManager(commands.Cog):
         guild_id = member.guild.id
         if guild_id not in self.guild_configs:
             return member.guild_permissions.administrator
-
+        
         config = self.guild_configs[guild_id]
         member_role_ids = {role.id for role in member.roles}
-
+        
         is_admin = any(role_id in member_role_ids for role_id in config.admin_roles)
         is_mod = any(role_id in member_role_ids for role_id in config.mod_roles)
-
+        
         return is_admin or is_mod or member.guild_permissions.administrator
 
     @commands.command(name='configurar_roles', aliases=['croles'])
@@ -129,18 +126,18 @@ class CommandManager(commands.Cog):
     async def configure_roles(self, ctx, role_type: str, *, role_mentions: str):
         """Configura roles de admin/mod para el servidor"""
         guild_id = ctx.guild.id
-
+        
         role_ids = [role.id for role in ctx.message.role_mentions]
-
+        
         if not role_ids:
             await ctx.send("❌ Debes mencionar al menos un rol.")
             return
-
+        
         if guild_id not in self.guild_configs:
             self.guild_configs[guild_id] = GuildConfig(guild_id)
-
+        
         config = self.guild_configs[guild_id]
-
+        
         if role_type.lower() == 'admin':
             config.admin_roles = role_ids
             role_type_str = "administrador"
@@ -150,7 +147,7 @@ class CommandManager(commands.Cog):
         else:
             await ctx.send("❌ El tipo de rol debe ser 'admin' o 'mod'.")
             return
-
+        
         # Guardar en Firestore
         try:
             self.guild_configs_collection.document(str(guild_id)).set(config.to_dict())
@@ -159,7 +156,7 @@ class CommandManager(commands.Cog):
         except Exception as e:
             await ctx.send("❌ Error al guardar la configuración.")
             print(f"Error guardando configuración: {e}")
-
+            
     def _normalize_name(self, name: str) -> str:
         """Normaliza el nombre del comando o alias a minúsculas"""
         return name[1:].lower() if name.startswith('.') else name.lower()
@@ -167,7 +164,7 @@ class CommandManager(commands.Cog):
     @commands.command(name='crear', aliases=['cmd'])
     async def create_command(self, ctx, name: str, category: Optional[str] = "General", *, response: str):
         """Crea un nuevo comando personalizado
-
+        
         Uso: .crear <nombre> [categoría] <respuesta>
         Si la categoría contiene espacios, debe ir entre comillas.
         """
@@ -177,30 +174,30 @@ class CommandManager(commands.Cog):
 
         guild_id = ctx.guild.id
         name = self._normalize_name(name)
-
+        
         # Inicializar diccionarios del servidor si no existen
         if guild_id not in self.guild_commands:
             self.guild_commands[guild_id] = {}
         if guild_id not in self.guild_aliases:
             self.guild_aliases[guild_id] = {}
-
+            
         # Verificar si el comando o alias ya existe
-        if (name in self.guild_commands[guild_id] or
-                name in self.guild_aliases[guild_id]):
+        if (name in self.guild_commands[guild_id] or 
+            name in self.guild_aliases[guild_id]):
             await ctx.send(f"❌ El comando o alias `.{name}` ya existe.")
             return
 
         try:
             # Crear comando
             command = CustomCommand(name, response, guild_id, ctx.author.id, category)
-
+            
             # Guardar en memoria
             self.guild_commands[guild_id][name] = command
-
+            
             # Guardar en Firestore
             cmd_doc_ref = self.commands_collection.document(f"{guild_id}_{name}")
             cmd_doc_ref.set(command.to_dict())
-
+            
             await ctx.send(f"✅ Comando `.{name}` creado exitosamente en la categoría '{category}'.")
         except Exception as e:
             await ctx.send("❌ Error al crear el comando.")
@@ -294,8 +291,8 @@ class CommandManager(commands.Cog):
             command = self.guild_commands[guild_id].pop(name)
             # Eliminar aliases asociados
             self.guild_aliases[guild_id] = {
-                alias: cmd_name
-                for alias, cmd_name in self.guild_aliases[guild_id].items()
+                alias: cmd_name 
+                for alias, cmd_name in self.guild_aliases[guild_id].items() 
                 if cmd_name != name
             }
 
@@ -361,7 +358,7 @@ class CommandManager(commands.Cog):
 
         guild_id = ctx.guild.id
         alias = self._normalize_name(alias)
-
+        
         if guild_id not in self.guild_aliases or alias not in self.guild_aliases[guild_id]:
             await ctx.send(f"❌ El alias `.{alias}` no existe.")
             return
@@ -370,7 +367,7 @@ class CommandManager(commands.Cog):
             # Obtener el comando original
             command_name = self.guild_aliases[guild_id][alias]
             command = self.guild_commands[guild_id][command_name]
-
+            
             # Eliminar alias
             command.aliases.remove(alias)
             del self.guild_aliases[guild_id][alias]
@@ -392,7 +389,7 @@ class CommandManager(commands.Cog):
     async def list_aliases(self, ctx, command_name: Optional[str] = None):
         """Lista los aliases de un comando o todos los aliases del servidor"""
         guild_id = ctx.guild.id
-
+        
         if guild_id not in self.guild_aliases or not self.guild_aliases[guild_id]:
             await ctx.send("❌ No hay aliases configurados en este servidor.")
             return
@@ -400,18 +397,18 @@ class CommandManager(commands.Cog):
         if command_name:
             # Limpiar el nombre del comando si viene con punto
             command_name = command_name[1:] if command_name.startswith('.') else command_name
-
+            
             # Verificar que el comando existe
             if command_name not in self.guild_commands[guild_id]:
                 await ctx.send(f"❌ El comando `.{command_name}` no existe.")
                 return
-
+            
             # Obtener aliases del comando específico
             command = self.guild_commands[guild_id][command_name]
             if not command.aliases:
                 await ctx.send(f"❌ El comando `.{command_name}` no tiene aliases.")
                 return
-
+            
             aliases_list = ", ".join(f"`.{alias}`" for alias in sorted(command.aliases))
             await ctx.send(f"Aliases para el comando `.{command_name}`:\n{aliases_list}")
         else:
@@ -421,14 +418,14 @@ class CommandManager(commands.Cog):
                 color=discord.Color.blue(),
                 description="Lista de todos los aliases configurados"
             )
-
+            
             # Organizar aliases por comando
             commands_with_aliases = {}
             for alias, cmd_name in self.guild_aliases[guild_id].items():
                 if cmd_name not in commands_with_aliases:
                     commands_with_aliases[cmd_name] = []
                 commands_with_aliases[cmd_name].append(alias)
-
+            
             # Añadir cada comando y sus aliases al embed
             for cmd_name, aliases in sorted(commands_with_aliases.items()):
                 aliases_str = ", ".join(f"`.{alias}`" for alias in sorted(aliases))
@@ -437,45 +434,59 @@ class CommandManager(commands.Cog):
                     value=aliases_str,
                     inline=False
                 )
-
+            
             await ctx.send(embed=embed)
-
+            
     @commands.command(name='comandos')
     async def list_commands(self, ctx, category: Optional[str] = None):
         """Lista todos los comandos personalizados del servidor, opcionalmente filtrados por categoría"""
         guild_id = ctx.guild.id
-
+    
         if guild_id not in self.guild_commands or not self.guild_commands[guild_id]:
             await ctx.send("❌ No hay comandos personalizados configurados en este servidor.")
             return
-
+            
         commands_list = self.guild_commands[guild_id]
-
+        
         if category:
             # Filtrar por categoría específica
-            filtered_commands = {name: cmd for name, cmd in commands_list.items()
-                                 if cmd.category.lower() == category.lower()}
-
+            filtered_commands = {name: cmd for name, cmd in commands_list.items() 
+                               if cmd.category.lower() == category.lower()}
+            
             if not filtered_commands:
                 await ctx.send(f"❌ No hay comandos en la categoría '{category}'.")
                 return
-
+                
             # Crear un embed para mostrar los comandos de la categoría
             embed = discord.Embed(
-                title=f"Comandos de la categoría '{category}'",
-                color=discord.Color.green(),
-                description=f"Lista de comandos en la categoría '{category}'"
+                title=f"📑 Comandos: {category}",
+                color=discord.Color.brand_green(),
+                description=f"Mostrando {len(filtered_commands)} comando(s) de la categoría '{category}'"
             )
-
+            
+            # Añadir un separador visual
+            embed.add_field(
+                name="⎯" * 20,
+                value="",
+                inline=False
+            )
+            
             for name, command in sorted(filtered_commands.items()):
                 aliases = ", ".join(f"`.{alias}`" for alias in sorted(command.aliases))
+                created_time = discord.utils.format_dt(command.created_at, style='R')
+                value = (
+                    f"📝 **Respuesta:** {command.response}\n"
+                    f"🔄 **Aliases:** {aliases if aliases else 'Ninguno'}\n"
+                    f"⏰ **Creado:** {created_time}"
+                )
                 embed.add_field(
-                    name=f"Comando `.{name}`",
-                    value=f"**Respuesta:** {command.response}\n**Aliases:** {aliases if aliases else 'Ninguno'}",
+                    name=f"`.{name}`",
+                    value=value,
                     inline=False
                 )
-
-            await ctx.send(embed=embed)
+            
+            embed.set_footer(text="💡 Usa '.comandos' para ver todas las categorías disponibles")
+                
         else:
             # Agrupar comandos por categoría
             categories = {}
@@ -483,70 +494,96 @@ class CommandManager(commands.Cog):
                 if command.category not in categories:
                     categories[command.category] = []
                 categories[command.category].append(command)
-
+            
             # Crear un embed para mostrar todas las categorías y comandos
             embed = discord.Embed(
-                title="Comandos Personalizados del Servidor",
-                color=discord.Color.green(),
-                description="Lista de comandos agrupados por categoría"
+                title="🎮 Centro de Comandos",
+                color=discord.Color.brand_green(),
+                description=(
+                    "Bienvenido al centro de comandos del servidor.\n"
+                    "Aquí encontrarás todos los comandos personalizados organizados por categorías.\n"
+                    "**Usa** `.comandos <categoría>` **para ver los detalles de una categoría específica.**"
+                )
             )
-
-            # Primero añadir un campo con todas las categorías disponibles
-            cat_list = ", ".join(sorted(categories.keys()))
+            
+            # Estadísticas generales
+            total_commands = len(commands_list)
+            total_categories = len(categories)
+            stats = (
+                f"📊 **Estadísticas**\n"
+                f"• Total de comandos: {total_commands}\n"
+                f"• Categorías: {total_categories}\n"
+            )
             embed.add_field(
-                name="Categorías disponibles",
-                value=cat_list,
+                name="",
+                value=stats,
                 inline=False
             )
-
-            # Añadir cada categoría y sus comandos
+            
+            # Añadir un separador visual
+            embed.add_field(
+                name="⎯" * 20,
+                value="",
+                inline=False
+            )
+            
+            # Añadir cada categoría con sus comandos
             for category_name, cmds in sorted(categories.items()):
-                commands_in_category = ", ".join(f"`.{cmd.name}`" for cmd in sorted(cmds, key=lambda x: x.name))
+                # Crear una lista formateada de comandos
+                commands_list = []
+                for cmd in sorted(cmds, key=lambda x: x.name):
+                    alias_count = len(cmd.aliases)
+                    alias_text = f" (+{alias_count})" if alias_count > 0 else ""
+                    commands_list.append(f"`.{cmd.name}`{alias_text}")
+                
+                # Agrupar comandos en columnas
+                commands_text = ", ".join(commands_list)
+                
                 embed.add_field(
-                    name=f"Categoría: {category_name}",
-                    value=commands_in_category,
+                    name=f"📁 {category_name} ({len(cmds)})",
+                    value=commands_text or "No hay comandos",
                     inline=False
                 )
-
-            # Añadir una nota explicativa
+            
+            # Añadir una nota al pie
             embed.set_footer(
-                text="Usa '.comandos <categoría>' para ver los detalles de los comandos en una categoría específica")
-
-            await ctx.send(embed=embed)
-
+                text="💡 Tip: Usa '.comandos <categoría>' para ver detalles específicos de cada comando"
+            )
+        
+        await ctx.send(embed=embed)
+    
     @commands.command(name='categorias')
     async def list_categories(self, ctx):
         """Lista todas las categorías de comandos disponibles en el servidor"""
         guild_id = ctx.guild.id
-
+        
         if guild_id not in self.guild_commands or not self.guild_commands[guild_id]:
             await ctx.send("❌ No hay comandos personalizados configurados en este servidor.")
             return
-
+            
         # Obtener categorías únicas
         categories = {}
         for name, command in self.guild_commands[guild_id].items():
             if command.category not in categories:
                 categories[command.category] = []
             categories[command.category].append(command.name)
-
+        
         # Crear un embed para mostrar las categorías
         embed = discord.Embed(
             title="Categorías de Comandos",
             color=discord.Color.blue(),
             description="Lista de todas las categorías y número de comandos"
         )
-
+        
         for category, commands in sorted(categories.items()):
             embed.add_field(
                 name=category,
                 value=f"{len(commands)} comandos",
                 inline=True
             )
-
-        embed.set_footer(
-            text="Usa '.comandos <categoría>' para ver los detalles de los comandos en una categoría específica")
-
+        
+        embed.set_footer(text="Usa '.comandos <categoría>' para ver los detalles de los comandos en una categoría específica")
+        
         await ctx.send(embed=embed)
 
     @commands.Cog.listener()
@@ -560,7 +597,7 @@ class CommandManager(commands.Cog):
             return
 
         command_name = self._normalize_name(message.content.split()[0])
-
+        
         # Buscar comando directo o alias
         if command_name in self.guild_commands[guild_id]:
             await message.channel.send(self.guild_commands[guild_id][command_name].response)

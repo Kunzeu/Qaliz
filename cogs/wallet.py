@@ -112,12 +112,12 @@ class WalletCog(commands.Cog):
 
             # Currency ID to category mapping
             categories = {
-                "Main": [1, 2, 3, 4, 7, 23, 24, 63, 68],  # Main currencies
+                "Main": [1, 2, 3, 4, 7, 23, 24, 63, 68, 77],  # Main currencies
                 "Special Magic": [45, 32],  
                 "Tokens": [29, 50, 59, 69], 
                 "Map Currencies": [19, 20, 22],
                 "End of Dragons": [61],
-                "Secrets of the Obscure": [66, 73, 74],
+                "Secrets of the Obscure": [66, 73, 74, 78, 79, 80],
                 "Janthir Wilds": [62, 76],
                 "Raids": [28, 70],
                 "Competition": [15, 26, 30, 33]
@@ -161,6 +161,11 @@ class WalletCog(commands.Cog):
                 73: "<:PinchofStardust:1356723379989909514>",
                 75: "<:CalcifiedGasp:1356723611926532107>",
                 76: "<:UrsusOblige:1356826426157961233>"
+                77: "<:GaetingCrystal:1379659919124594720>",
+                78: "<:FineRiftEssence:1379660071650332853>",
+                79: "<:RareRiftEssence:1379660242538987656>>",
+                80: "<:MasterworkRiftEssence:1379660354967044106>"
+                
             }
             
             # Custom icons for each category

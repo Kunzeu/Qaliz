@@ -7,12 +7,12 @@ from utils.database import dbManager
 
 class TimeConverter:
     time_regex = re.compile(r"""
-        (?:(?P<seconds>\d+)(?:s|seconds|second|sec))?
-        (?:(?P<minutes>\d+)(?:m))?
-        (?:(?P<hours>\d+)(?:h|hours|hour))?
-        (?:(?P<days>\d+)(?:d|days|day))?
-        (?:(?P<months>\d+)(?:mo|months|month|))?
         (?:(?P<weeks>\d+)(?:w|weeks|week))?
+        (?:(?P<months>\d+)(?:mo|months|month))?
+        (?:(?P<days>\d+)(?:d|days|day))?
+        (?:(?P<hours>\d+)(?:h|hours|hour))?
+        (?:(?P<minutes>\d+)(?:m|minutes|minute|min))?
+        (?:(?P<seconds>\d+)(?:s|seconds|second|sec))?
     """, re.VERBOSE)
 
     @classmethod

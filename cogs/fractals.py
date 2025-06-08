@@ -10,17 +10,17 @@ class Fractals(commands.Cog):
         self.bot = bot
         # Complete rotations (same format as before)
         self.t4_rotations = [
-            [{"level": 96, "name": "Nightmare"}, {"level": 86, "name": "Snowblind"},
+             [{"level": 96, "name": "Nightmare"}, {"level": 86, "name": "Snowblind"},
              {"level": 92, "name": "Volcanic"}],
             [{"level": 93, "name": "Aetherblade"}, {"level": 82, "name": "Thaumanova Reactor"},
-             {"level": 91, "name": "Uncategorized"}],
+             {"level": 79, "name": "Uncategorized"}],
             [{"level": 88, "name": "Chaos"}, {"level": 94, "name": "Cliffside"},
              {"level": 87, "name": "Twilight Oasis"}],
-            [{"level": 95, "name": "Captain Mai Trin Boss"}, {"level": 84, "name": "Deepstone"},
+            [{"level": 91, "name": "Captain Mai Trin Boss"}, {"level": 84, "name": "Deepstone"},
              {"level": 99, "name": "Silent Surf"}],
             [{"level": 96, "name": "Nightmare"}, {"level": 86, "name": "Snowblind"},
              {"level": 80, "name": "Solid Ocean"}],
-            [{"level": 88, "name": "Chaos"}, {"level": 91, "name": "Uncategorized"},
+            [{"level": 88, "name": "Chaos"}, {"level": 79, "name": "Uncategorized"},
              {"level": 85, "name": "Urban Battleground"}],
             [{"level": 84, "name": "Deepstone"}, {"level": 83, "name": "Molten Furnace"},
              {"level": 78, "name": "Siren's Reef"}],
@@ -35,10 +35,10 @@ class Fractals(commands.Cog):
             [{"level": 93, "name": "Aetherblade"}, {"level": 88, "name": "Chaos"},
              {"level": 96, "name": "Nightmare"}],
             [{"level": 94, "name": "Cliffside"}, {"level": 100, "name": "Lonely Tower"},
-             {"level": 78, "name": "Siren's Reef"}],
+             {"level": 95, "name": "Kinfall"}],
             [{"level": 84, "name": "Deepstone"}, {"level": 80, "name": "Solid Ocean"},
              {"level": 89, "name": "Swampland"}],
-            [{"level": 95, "name": "Captain Mai Trin Boss"}, {"level": 90, "name": "Molten Boss"},
+            [{"level": 91, "name": "Captain Mai Trin Boss"}, {"level": 90, "name": "Molten Boss"},
              {"level": 97, "name": "Shattered Observatory"}],
         ]
 
@@ -61,7 +61,7 @@ class Fractals(commands.Cog):
             [{"level": 14, "name": "Aetherblade"}, {"level": 34, "name": "Thaumanova Reactor"},
              {"level": 74, "name": "Sunqua Peak"}],
             [{"level": 19, "name": "Volcanic"}, {"level": 50, "name": "Lonely Tower"},
-             {"level": 57, "name": "Urban Battleground"}],
+             {"level": 70, "name": "Kinfall"}],
             [{"level": 15, "name": "Thaumanova Reactor"}, {"level": 41, "name": "Twilight Oasis"},
              {"level": 60, "name": "Solid Ocean"}],
             [{"level": 24, "name": "Sunqua Peak"}, {"level": 35, "name": "Solid Ocean"},

@@ -2,6 +2,7 @@ from typing import Optional, Dict, Any, List, Set
 from datetime import datetime
 import discord
 from discord.ext import commands
+from discord.ui import Button, View
 
 class GuildConfig:
     def __init__(self, guild_id: int, admin_roles: List[int] = None, mod_roles: List[int] = None):
@@ -60,6 +61,58 @@ class CustomCommand:
         cmd.last_modified = datetime.fromisoformat(data["last_modified"])
         cmd.aliases = set(data.get("aliases", []))
         return cmd
+
+class CommandPaginator(View):
+    def __init__(self, pages: List[discord.Embed], timeout: int = 60):
+        super().__init__(timeout=timeout)
+        self.pages = pages
+        self.current_page = 0
+        
+        # Deshabilitar botones si solo hay una página
+        self.prev_button = Button(label="◀", style=discord.ButtonStyle.primary, disabled=len(pages) <= 1)
+        self.next_button = Button(label="▶", style=discord.ButtonStyle.primary, disabled=len(pages) <= 1)
+        
+        # Añadir callbacks a los botones
+        self.prev_button.callback = self.prev_callback
+        self.next_button.callback = self.next_callback
+        
+        # Añadir botones a la vista
+        self.add_item(self.prev_button)
+        self.add_item(self.next_button)
+        
+    async def prev_callback(self, interaction: discord.Interaction):
+        if self.current_page > 0:
+            self.current_page -= 1
+            
+            # Actualizar estado de los botones
+            self.prev_button.disabled = self.current_page == 0
+            self.next_button.disabled = False
+            
+            # Actualizar el número de página en el embed
+            self.pages[self.current_page].set_footer(text=f"Página {self.current_page + 1} de {len(self.pages)}")
+            await interaction.response.edit_message(embed=self.pages[self.current_page], view=self)
+        else:
+            await interaction.response.defer()
+            
+    async def next_callback(self, interaction: discord.Interaction):
+        if self.current_page < len(self.pages) - 1:
+            self.current_page += 1
+            
+            # Actualizar estado de los botones
+            self.next_button.disabled = self.current_page == len(self.pages) - 1
+            self.prev_button.disabled = False
+            
+            # Actualizar el número de página en el embed
+            self.pages[self.current_page].set_footer(text=f"Página {self.current_page + 1} de {len(self.pages)}")
+            await interaction.response.edit_message(embed=self.pages[self.current_page], view=self)
+        else:
+            await interaction.response.defer()
+            
+    async def on_timeout(self):
+        # Deshabilitar todos los botones cuando el tiempo se agota
+        self.prev_button.disabled = True
+        self.next_button.disabled = True
+        # No necesitamos actualizar el mensaje aquí ya que la vista se eliminará automáticamente
 
 class CommandManager(commands.Cog):
     def __init__(self, bot):
@@ -457,36 +510,50 @@ class CommandManager(commands.Cog):
                 await ctx.send(f"❌ No hay comandos en la categoría '{category}'.")
                 return
                 
-            # Crear un embed para mostrar los comandos de la categoría
-            embed = discord.Embed(
-                title=f"📑 Comandos: {category}",
-                color=discord.Color.brand_green(),
-                description=f"Mostrando {len(filtered_commands)} comando(s) de la categoría '{category}'"
-            )
+            # Dividir los comandos en páginas (5 comandos por página)
+            commands_per_page = 5
+            commands_items = list(filtered_commands.items())
+            pages = []
             
-            # Añadir un separador visual
-            embed.add_field(
-                name="⎯" * 20,
-                value="",
-                inline=False
-            )
-            
-            for name, command in sorted(filtered_commands.items()):
-                aliases = ", ".join(f"`.{alias}`" for alias in sorted(command.aliases))
-                created_time = discord.utils.format_dt(command.created_at, style='R')
-                value = (
-                    f"📝 **Respuesta:** {command.response}\n"
-                    f"🔄 **Aliases:** {aliases if aliases else 'Ninguno'}\n"
-                    f"⏰ **Creado:** {created_time}"
+            for i in range(0, len(commands_items), commands_per_page):
+                page_commands = dict(commands_items[i:i + commands_per_page])
+                
+                embed = discord.Embed(
+                    title=f"📑 Comandos: {category}",
+                    color=discord.Color.brand_green(),
+                    description=f"Mostrando {len(page_commands)} comando(s) de la categoría '{category}'"
                 )
+                
+                # Añadir un separador visual
                 embed.add_field(
-                    name=f"`.{name}`",
-                    value=value,
+                    name="⎯" * 20,
+                    value="",
                     inline=False
                 )
-            
-            embed.set_footer(text="💡 Usa '.comandos' para ver todas las categorías disponibles")
                 
+                for name, command in sorted(page_commands.items()):
+                    aliases = ", ".join(f"`.{alias}`" for alias in sorted(command.aliases))
+                    created_time = discord.utils.format_dt(command.created_at, style='R')
+                    value = (
+                        f"📝 **Respuesta:** {command.response}\n"
+                        f"🔄 **Aliases:** {aliases if aliases else 'Ninguno'}\n"
+                        f"⏰ **Creado:** {created_time}"
+                    )
+                    embed.add_field(
+                        name=f"`.{name}`",
+                        value=value,
+                        inline=False
+                    )
+                
+                pages.append(embed)
+            
+            if pages:
+                paginator = CommandPaginator(pages)
+                pages[0].set_footer(text=f"Página 1 de {len(pages)}")
+                await ctx.send(embed=pages[0], view=paginator)
+            else:
+                await ctx.send("❌ No se encontraron comandos para mostrar.")
+            
         else:
             # Agrupar comandos por categoría
             categories = {}
@@ -495,62 +562,69 @@ class CommandManager(commands.Cog):
                     categories[command.category] = []
                 categories[command.category].append(command)
             
-            # Crear un embed para mostrar todas las categorías y comandos
-            embed = discord.Embed(
-                title="🎮 Centro de Comandos",
-                color=discord.Color.brand_green(),
-                description=(
-                    "Bienvenido al centro de comandos del servidor.\n"
-                    "Aquí encontrarás todos los comandos personalizados organizados por categorías.\n"
-                    "**Usa** `.comandos <categoría>` **para ver los detalles de una categoría específica.**"
+            # Dividir las categorías en páginas (4 categorías por página)
+            categories_per_page = 4
+            categories_items = list(categories.items())
+            pages = []
+            
+            for i in range(0, len(categories_items), categories_per_page):
+                page_categories = dict(categories_items[i:i + categories_per_page])
+                
+                embed = discord.Embed(
+                    title="🎮 Centro de Comandos",
+                    color=discord.Color.brand_green(),
+                    description=(
+                        "Bienvenido al centro de comandos del servidor.\n"
+                        "Aquí encontrarás todos los comandos personalizados organizados por categorías.\n"
+                        "**Usa** `.comandos <categoría>` **para ver los detalles de una categoría específica.**"
+                    )
                 )
-            )
-            
-            # Estadísticas generales
-            total_commands = len(commands_list)
-            total_categories = len(categories)
-            stats = (
-                f"📊 **Estadísticas**\n"
-                f"• Total de comandos: {total_commands}\n"
-                f"• Categorías: {total_categories}\n"
-            )
-            embed.add_field(
-                name="",
-                value=stats,
-                inline=False
-            )
-            
-            # Añadir un separador visual
-            embed.add_field(
-                name="⎯" * 20,
-                value="",
-                inline=False
-            )
-            
-            # Añadir cada categoría con sus comandos
-            for category_name, cmds in sorted(categories.items()):
-                # Crear una lista formateada de comandos
-                commands_list = []
-                for cmd in sorted(cmds, key=lambda x: x.name):
-                    alias_count = len(cmd.aliases)
-                    alias_text = f" (+{alias_count})" if alias_count > 0 else ""
-                    commands_list.append(f"`.{cmd.name}`{alias_text}")
                 
-                # Agrupar comandos en columnas
-                commands_text = ", ".join(commands_list)
-                
+                # Estadísticas generales
+                total_commands = len(commands_list)
+                total_categories = len(categories)
+                stats = (
+                    f"📊 **Estadísticas**\n"
+                    f"• Total de comandos: {total_commands}\n"
+                    f"• Categorías: {total_categories}\n"
+                )
                 embed.add_field(
-                    name=f"📁 {category_name} ({len(cmds)})",
-                    value=commands_text or "No hay comandos",
+                    name="",
+                    value=stats,
                     inline=False
                 )
+                
+                # Añadir un separador visual
+                embed.add_field(
+                    name="⎯" * 20,
+                    value="",
+                    inline=False
+                )
+                
+                # Añadir las categorías de esta página
+                for category_name, cmds in sorted(page_categories.items()):
+                    commands_list = []
+                    for cmd in sorted(cmds, key=lambda x: x.name):
+                        alias_count = len(cmd.aliases)
+                        alias_text = f" (+{alias_count})" if alias_count > 0 else ""
+                        commands_list.append(f"`.{cmd.name}`{alias_text}")
+                    
+                    commands_text = ", ".join(commands_list)
+                    
+                    embed.add_field(
+                        name=f"📁 {category_name} ({len(cmds)})",
+                        value=commands_text or "No hay comandos",
+                        inline=False
+                    )
+                
+                pages.append(embed)
             
-            # Añadir una nota al pie
-            embed.set_footer(
-                text="💡 Tip: Usa '.comandos <categoría>' para ver detalles específicos de cada comando"
-            )
-        
-        await ctx.send(embed=embed)
+            if pages:
+                paginator = CommandPaginator(pages)
+                pages[0].set_footer(text=f"Página 1 de {len(pages)}")
+                await ctx.send(embed=pages[0], view=paginator)
+            else:
+                await ctx.send("❌ No se encontraron comandos para mostrar.")
     
     @commands.command(name='categorias')
     async def list_categories(self, ctx):

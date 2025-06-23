@@ -25,3 +25,5 @@ __pycache__/
 *.json
 database2.py
 Dockerfile
+update_qaliz.ps1
+update-qaliz.bat

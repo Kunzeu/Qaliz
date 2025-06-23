@@ -24,3 +24,4 @@ __pycache__/
 
 *.json
 database2.py
+Dockerfile

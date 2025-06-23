@@ -117,7 +117,7 @@ class WalletCog(commands.Cog):
                 "Tokens": [29, 50, 59, 69], 
                 "Map Currencies": [19, 20, 22],
                 "End of Dragons": [61],
-                "Secrets of the Obscure": [66, 73, 74, 78, 79, 80],
+                "Secrets of the Obscure": [66, 72, 73, 75, 78, 79, 80],
                 "Janthir Wilds": [62, 76],
                 "Raids": [28, 70],
                 "Competition": [15, 26, 30, 33]
@@ -158,6 +158,7 @@ class WalletCog(commands.Cog):
                 68: "<:ImperialFavor:1356714893075808256>",
                 69: "<:TaleofDungeonDelving:1355637498465747119>",
                 70: "<:LegendaryInsight:1356712898252243135>",
+                72: "<:StaticCharge:1386402474004451358>",
                 73: "<:PinchofStardust:1356723379989909514>",
                 75: "<:CalcifiedGasp:1356723611926532107>",
                 76: "<:UrsusOblige:1356826426157961233>",

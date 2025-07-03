@@ -100,6 +100,21 @@ class ElvisTimeoutCog(commands.Cog):
         embed.set_image(url=emote_url)
         await ctx.send(embed=embed)
         logger.info(f"Comando .this ejecutado por {ctx.author.name}#{ctx.author.discriminator}")
+        
+    @commands.command(name='beshito')
+    async def this_command(self, ctx):
+        """Envía un mensaje con un emote animado de 7TV.
+        Uso: .this
+        """
+        emote_url = "https://cdn.7tv.app/emote/01HDEDG4AG0000M256JWWQB32D/4x.avif"
+        embed = discord.Embed(
+            description=f"{ctx.author.mention} ha usado el comando .this!",
+            color=discord.Color.blue(),
+            timestamp=datetime.now()
+        )
+        embed.set_image(url=emote_url)
+        await ctx.send(embed=embed)
+        logger.info(f"Comando .this ejecutado por {ctx.author.name}#{ctx.author.discriminator}")
 
 async def setup(bot: commands.Bot):
     await bot.add_cog(ElvisTimeoutCog(bot)) 

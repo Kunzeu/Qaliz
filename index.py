@@ -34,7 +34,7 @@ intents.members = True
 class CustomBot(commands.Bot):
     def __init__(self):
         super().__init__(
-            command_prefix='.',
+            command_prefix=['.', '!', '?'],  # Múltiples prefijos
             intents=intents,
             activity=discord.Game(name="Guild Wars 2"),
             status=discord.Status.idle,

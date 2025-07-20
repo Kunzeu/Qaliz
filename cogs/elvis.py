@@ -114,7 +114,7 @@ class ElvisTimeoutCog(commands.Cog):
         )
         embed.set_image(url=emote_url)
         await ctx.send(embed=embed)
-        logger.info(f"Comando .this ejecutado por {ctx.author.name}#{ctx.author.discriminator}")
+        logger.info(f"Comando .besito ejecutado por {ctx.author.name}#{ctx.author.discriminator}")
 
 async def setup(bot: commands.Bot):
     await bot.add_cog(ElvisTimeoutCog(bot)) 

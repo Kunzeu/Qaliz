@@ -5,16 +5,18 @@ from discord.ext import commands
 from discord.ui import Button, View
 
 class GuildConfig:
-    def __init__(self, guild_id: int, admin_roles: List[int] = None, mod_roles: List[int] = None):
+    def __init__(self, guild_id: int, admin_roles: List[int] = None, mod_roles: List[int] = None, custom_prefixes: List[str] = None):
         self.guild_id = guild_id
         self.admin_roles = admin_roles or []
         self.mod_roles = mod_roles or []
+        self.custom_prefixes = custom_prefixes or ['.', '!', '?']  # Prefijos por defecto
     
     def to_dict(self) -> Dict[str, Any]:
         return {
             "guild_id": self.guild_id,
             "admin_roles": self.admin_roles,
-            "mod_roles": self.mod_roles
+            "mod_roles": self.mod_roles,
+            "custom_prefixes": self.custom_prefixes
         }
     
     @classmethod
@@ -22,7 +24,8 @@ class GuildConfig:
         return cls(
             guild_id=data["guild_id"],
             admin_roles=data.get("admin_roles", []),
-            mod_roles=data.get("mod_roles", [])
+            mod_roles=data.get("mod_roles", []),
+            custom_prefixes=data.get("custom_prefixes", ['.', '!', '?'])
         )
 
 class CustomCommand:
@@ -210,9 +213,18 @@ class CommandManager(commands.Cog):
             await ctx.send("❌ Error al guardar la configuración.")
             print(f"Error guardando configuración: {e}")
             
-    def _normalize_name(self, name: str) -> str:
+    def _normalize_name(self, name: str, guild_id: int = None) -> str:
         """Normaliza el nombre del comando o alias a minúsculas"""
-        return name[1:].lower() if name.startswith('.') else name.lower()
+        # Obtener prefijos personalizados del servidor o usar los por defecto
+        if guild_id and guild_id in self.guild_configs:
+            prefixes = self.guild_configs[guild_id].custom_prefixes
+        else:
+            prefixes = ['.', '!', '?']
+        
+        for prefix in prefixes:
+            if name.startswith(prefix):
+                return name[1:].lower()
+        return name.lower()
 
     @commands.command(name='crear', aliases=['cmd'])
     async def create_command(self, ctx, name: str, category: Optional[str] = "General", *, response: str):
@@ -226,7 +238,7 @@ class CommandManager(commands.Cog):
             return
 
         guild_id = ctx.guild.id
-        name = self._normalize_name(name)
+        name = self._normalize_name(name, guild_id)
         
         # Inicializar diccionarios del servidor si no existen
         if guild_id not in self.guild_commands:
@@ -264,7 +276,7 @@ class CommandManager(commands.Cog):
             return
 
         guild_id = ctx.guild.id
-        name = self._normalize_name(name)
+        name = self._normalize_name(name, guild_id)
 
         if guild_id not in self.guild_commands or name not in self.guild_commands[guild_id]:
             await ctx.send(f"❌ El comando `.{name}` no existe.")
@@ -296,7 +308,7 @@ class CommandManager(commands.Cog):
             return
 
         guild_id = ctx.guild.id
-        name = self._normalize_name(name)
+        name = self._normalize_name(name, guild_id)
 
         if guild_id not in self.guild_commands or name not in self.guild_commands[guild_id]:
             await ctx.send(f"❌ El comando `.{name}` no existe.")
@@ -362,8 +374,8 @@ class CommandManager(commands.Cog):
             return
 
         guild_id = ctx.guild.id
-        command_name = self._normalize_name(command_name)
-        alias = self._normalize_name(alias)
+        command_name = self._normalize_name(command_name, guild_id)
+        alias = self._normalize_name(alias, guild_id)
 
         # Verificar que el comando existe
         if guild_id not in self.guild_commands or command_name not in self.guild_commands[guild_id]:
@@ -410,7 +422,7 @@ class CommandManager(commands.Cog):
             return
 
         guild_id = ctx.guild.id
-        alias = self._normalize_name(alias)
+        alias = self._normalize_name(alias, guild_id)
         
         if guild_id not in self.guild_aliases or alias not in self.guild_aliases[guild_id]:
             await ctx.send(f"❌ El alias `.{alias}` no existe.")
@@ -660,17 +672,167 @@ class CommandManager(commands.Cog):
         
         await ctx.send(embed=embed)
 
+    @commands.command(name='prefijos', aliases=['prefixes'])
+    async def list_prefixes(self, ctx):
+        """Muestra los prefijos configurados para este servidor"""
+        guild_id = ctx.guild.id
+        
+        if guild_id not in self.guild_configs:
+            # Usar prefijos por defecto
+            prefixes = ['.', '!', '?']
+            embed = discord.Embed(
+                title="🎯 Prefijos del Servidor",
+                color=discord.Color.green(),
+                description="Prefijos configurados para este servidor"
+            )
+            embed.add_field(
+                name="Prefijos actuales",
+                value=", ".join(f"`{prefix}`" for prefix in prefixes),
+                inline=False
+            )
+            embed.add_field(
+                name="Comandos de gestión",
+                value="`.agregarprefijo <prefijo>` - Agregar nuevo prefijo\n`.eliminarprefijo <prefijo>` - Eliminar prefijo\n`.resetprefijos` - Restablecer prefijos por defecto",
+                inline=False
+            )
+        else:
+            config = self.guild_configs[guild_id]
+            embed = discord.Embed(
+                title="🎯 Prefijos del Servidor",
+                color=discord.Color.green(),
+                description="Prefijos configurados para este servidor"
+            )
+            embed.add_field(
+                name="Prefijos actuales",
+                value=", ".join(f"`{prefix}`" for prefix in config.custom_prefixes),
+                inline=False
+            )
+            embed.add_field(
+                name="Comandos de gestión",
+                value="`.agregarprefijo <prefijo>` - Agregar nuevo prefijo\n`.eliminarprefijo <prefijo>` - Eliminar prefijo\n`.resetprefijos` - Restablecer prefijos por defecto",
+                inline=False
+            )
+        
+        await ctx.send(embed=embed)
+
+    @commands.command(name='agregarprefijo', aliases=['addprefix'])
+    @commands.has_permissions(administrator=True)
+    async def add_prefix(self, ctx, prefix: str):
+        """Agrega un nuevo prefijo personalizado al servidor"""
+        guild_id = ctx.guild.id
+        
+        # Validar el prefijo
+        if len(prefix) > 3:
+            await ctx.send("❌ El prefijo no puede tener más de 3 caracteres.")
+            return
+        
+        if prefix in ['<', '>', '@', '#', '&', '!', '?', '.', ',', ';', ':', '"', "'", '`', '~', '^', '*', '+', '=', '|', '\\', '/', '(', ')', '[', ']', '{', '}']:
+            await ctx.send("❌ El prefijo contiene caracteres no permitidos.")
+            return
+        
+        # Inicializar configuración si no existe
+        if guild_id not in self.guild_configs:
+            self.guild_configs[guild_id] = GuildConfig(guild_id)
+        
+        config = self.guild_configs[guild_id]
+        
+        if prefix in config.custom_prefixes:
+            await ctx.send(f"❌ El prefijo `{prefix}` ya está configurado.")
+            return
+        
+        # Agregar prefijo
+        config.custom_prefixes.append(prefix)
+        
+        # Guardar en Firestore
+        try:
+            self.guild_configs_collection.document(str(guild_id)).set(config.to_dict())
+            await ctx.send(f"✅ Prefijo `{prefix}` agregado exitosamente. Prefijos actuales: {', '.join(f'`{p}`' for p in config.custom_prefixes)}")
+        except Exception as e:
+            await ctx.send("❌ Error al guardar la configuración.")
+            print(f"Error guardando configuración: {e}")
+
+    @commands.command(name='eliminarprefijo', aliases=['delprefix'])
+    @commands.has_permissions(administrator=True)
+    async def remove_prefix(self, ctx, prefix: str):
+        """Elimina un prefijo personalizado del servidor"""
+        guild_id = ctx.guild.id
+        
+        if guild_id not in self.guild_configs:
+            await ctx.send("❌ No hay prefijos personalizados configurados.")
+            return
+        
+        config = self.guild_configs[guild_id]
+        
+        if prefix not in config.custom_prefixes:
+            await ctx.send(f"❌ El prefijo `{prefix}` no está configurado.")
+            return
+        
+        # No permitir eliminar todos los prefijos
+        if len(config.custom_prefixes) <= 1:
+            await ctx.send("❌ No puedes eliminar todos los prefijos. Debe quedar al menos uno.")
+            return
+        
+        # Eliminar prefijo
+        config.custom_prefixes.remove(prefix)
+        
+        # Guardar en Firestore
+        try:
+            self.guild_configs_collection.document(str(guild_id)).set(config.to_dict())
+            await ctx.send(f"✅ Prefijo `{prefix}` eliminado exitosamente. Prefijos actuales: {', '.join(f'`{p}`' for p in config.custom_prefixes)}")
+        except Exception as e:
+            await ctx.send("❌ Error al guardar la configuración.")
+            print(f"Error guardando configuración: {e}")
+
+    @commands.command(name='resetprefijos', aliases=['resetprefixes'])
+    @commands.has_permissions(administrator=True)
+    async def reset_prefixes(self, ctx):
+        """Restablece los prefijos a los valores por defecto"""
+        guild_id = ctx.guild.id
+        
+        # Inicializar configuración si no existe
+        if guild_id not in self.guild_configs:
+            self.guild_configs[guild_id] = GuildConfig(guild_id)
+        
+        config = self.guild_configs[guild_id]
+        old_prefixes = config.custom_prefixes.copy()
+        config.custom_prefixes = ['.', '!', '?']
+        
+        # Guardar en Firestore
+        try:
+            self.guild_configs_collection.document(str(guild_id)).set(config.to_dict())
+            await ctx.send(f"✅ Prefijos restablecidos a los valores por defecto.\n**Antes:** {', '.join(f'`{p}`' for p in old_prefixes)}\n**Ahora:** {', '.join(f'`{p}`' for p in config.custom_prefixes)}")
+        except Exception as e:
+            await ctx.send("❌ Error al guardar la configuración.")
+            print(f"Error guardando configuración: {e}")
+
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
         """Detecta y ejecuta comandos personalizados"""
-        if message.author.bot or not message.content.startswith('.'):
+        if message.author.bot:
             return
 
         guild_id = message.guild.id
+        
+        # Obtener prefijos personalizados del servidor o usar los por defecto
+        if guild_id in self.guild_configs:
+            prefixes = self.guild_configs[guild_id].custom_prefixes
+        else:
+            prefixes = ['.', '!', '?']
+        
+        # Verificar si el mensaje comienza con alguno de los prefijos configurados
+        used_prefix = None
+        for prefix in prefixes:
+            if message.content.startswith(prefix):
+                used_prefix = prefix
+                break
+        
+        if not used_prefix:
+            return
+
         if guild_id not in self.guild_commands:
             return
 
-        command_name = self._normalize_name(message.content.split()[0])
+        command_name = self._normalize_name(message.content.split()[0], guild_id)
         
         # Buscar comando directo o alias
         if command_name in self.guild_commands[guild_id]:

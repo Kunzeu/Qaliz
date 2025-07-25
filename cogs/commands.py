@@ -867,9 +867,14 @@ class CommandManager(commands.Cog):
         # Buscar comando directo o alias
         if command_name in self.guild_commands[guild_id]:
             await message.channel.send(self.guild_commands[guild_id][command_name].response)
+            return  # No procesar más, evitar error visual
         elif command_name in self.guild_aliases[guild_id]:
             original_name = self.guild_aliases[guild_id][command_name]
             await message.channel.send(self.guild_commands[guild_id][original_name].response)
+            return  # No procesar más, evitar error visual
+
+        # Solo si no es comando personalizado ni alias, procesar comandos normales:
+        await self.bot.process_commands(message)
 
     @commands.Cog.listener()
     async def on_command_error(self, ctx, error):

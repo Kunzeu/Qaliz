@@ -506,66 +506,64 @@ class CommandManager(commands.Cog):
     async def list_commands(self, ctx, category: Optional[str] = None):
         """Lista todos los comandos personalizados del servidor, opcionalmente filtrados por categoría"""
         guild_id = ctx.guild.id
-    
         if guild_id not in self.guild_commands or not self.guild_commands[guild_id]:
             await ctx.send("❌ No hay comandos personalizados configurados en este servidor.")
             return
-            
         commands_list = self.guild_commands[guild_id]
-        
+        if guild_id in self.guild_configs:
+            prefixes = self.guild_configs[guild_id].custom_prefixes
+        else:
+            prefixes = ['.', '!', '?']
+        prefix_str = ", ".join(f"`{p}`" for p in prefixes)
         if category:
-            # Filtrar por categoría específica
             filtered_commands = {name: cmd for name, cmd in commands_list.items() 
                                if cmd.category.lower() == category.lower()}
-            
             if not filtered_commands:
                 await ctx.send(f"❌ No hay comandos en la categoría '{category}'.")
                 return
-                
-            # Dividir los comandos en páginas (5 comandos por página)
-            commands_per_page = 5
+            commands_per_page = 10
             commands_items = list(filtered_commands.items())
             pages = []
-            
             for i in range(0, len(commands_items), commands_per_page):
                 page_commands = dict(commands_items[i:i + commands_per_page])
-                
                 embed = discord.Embed(
                     title=f"📑 Comandos: {category}",
                     color=discord.Color.brand_green(),
                     description=f"Mostrando {len(page_commands)} comando(s) de la categoría '{category}'"
                 )
-                
-                # Añadir un separador visual
+                embed.add_field(
+                    name="Prefijos válidos",
+                    value=prefix_str,
+                    inline=False
+                )
                 embed.add_field(
                     name="⎯" * 20,
                     value="",
                     inline=False
                 )
-                
-                for name, command in sorted(page_commands.items()):
-                    aliases = ", ".join(f"`.{alias}`" for alias in sorted(command.aliases))
-                    created_time = discord.utils.format_dt(command.created_at, style='R')
-                    value = (
-                        f"📝 **Respuesta:** {command.response}\n"
-                        f"🔄 **Aliases:** {aliases if aliases else 'Ninguno'}\n"
-                        f"⏰ **Creado:** {created_time}"
-                    )
-                    embed.add_field(
-                        name=f"`.{name}`",
-                        value=value,
-                        inline=False
-                    )
-                
+                # Mostrar comandos en bloques de 5 por línea, con formato de aliases
+                cmd_names = []
+                for name, cmd in sorted(page_commands.items()):
+                    alias_count = len(cmd.aliases)
+                    if alias_count == 1:
+                        alias_str = f" ({list(cmd.aliases)[0]})"
+                    elif alias_count > 1:
+                        alias_str = f" (+{alias_count})"
+                    else:
+                        alias_str = ""
+                    cmd_names.append(f"`{name}`{alias_str}")
+                lines = [" ".join(cmd_names[j:j+5]) for j in range(0, len(cmd_names), 5)]
+                embed.add_field(
+                    name=f"Comandos",
+                    value="\n".join(lines),
+                    inline=False
+                )
                 pages.append(embed)
-            
             if pages:
                 paginator = CommandPaginator(pages)
-                pages[0].set_footer(text=f"Página 1 de {len(pages)}")
                 await ctx.send(embed=pages[0], view=paginator)
             else:
                 await ctx.send("❌ No se encontraron comandos para mostrar.")
-            
         else:
             # Agrupar comandos por categoría
             categories = {}
@@ -573,15 +571,11 @@ class CommandManager(commands.Cog):
                 if command.category not in categories:
                     categories[command.category] = []
                 categories[command.category].append(command)
-            
-            # Dividir las categorías en páginas (4 categorías por página)
             categories_per_page = 4
             categories_items = list(categories.items())
             pages = []
-            
             for i in range(0, len(categories_items), categories_per_page):
                 page_categories = dict(categories_items[i:i + categories_per_page])
-                
                 embed = discord.Embed(
                     title="🎮 Centro de Comandos",
                     color=discord.Color.brand_green(),
@@ -591,8 +585,6 @@ class CommandManager(commands.Cog):
                         "**Usa** `.comandos <categoría>` **para ver los detalles de una categoría específica.**"
                     )
                 )
-                
-                # Estadísticas generales
                 total_commands = len(commands_list)
                 total_categories = len(categories)
                 stats = (
@@ -601,42 +593,70 @@ class CommandManager(commands.Cog):
                     f"• Categorías: {total_categories}\n"
                 )
                 embed.add_field(
+                    name="Prefijos válidos",
+                    value=prefix_str,
+                    inline=False
+                )
+                embed.add_field(
                     name="",
                     value=stats,
                     inline=False
                 )
-                
-                # Añadir un separador visual
                 embed.add_field(
                     name="⎯" * 20,
                     value="",
                     inline=False
                 )
-                
-                # Añadir las categorías de esta página
                 for category_name, cmds in sorted(page_categories.items()):
-                    commands_list = []
+                    cmd_names = []
                     for cmd in sorted(cmds, key=lambda x: x.name):
                         alias_count = len(cmd.aliases)
-                        alias_text = f" (+{alias_count})" if alias_count > 0 else ""
-                        commands_list.append(f"`.{cmd.name}`{alias_text}")
-                    
-                    commands_text = ", ".join(commands_list)
-                    
+                        if alias_count == 1:
+                            alias_str = f" ({list(cmd.aliases)[0]})"
+                        elif alias_count > 1:
+                            alias_str = f" (+{alias_count})"
+                        else:
+                            alias_str = ""
+                        cmd_names.append(f"`{cmd.name}`{alias_str}")
+                    lines = [" ".join(cmd_names[j:j+5]) for j in range(0, len(cmd_names), 5)]
                     embed.add_field(
                         name=f"📁 {category_name} ({len(cmds)})",
-                        value=commands_text or "No hay comandos",
+                        value="\n".join(lines) or "No hay comandos",
                         inline=False
                     )
-                
                 pages.append(embed)
-            
             if pages:
                 paginator = CommandPaginator(pages)
-                pages[0].set_footer(text=f"Página 1 de {len(pages)}")
                 await ctx.send(embed=pages[0], view=paginator)
             else:
                 await ctx.send("❌ No se encontraron comandos para mostrar.")
+
+    @commands.command(name='aliases')
+    async def list_all_aliases(self, ctx):
+        """Muestra todos los aliases del servidor organizados por comando"""
+        guild_id = ctx.guild.id
+        if guild_id not in self.guild_aliases or not self.guild_aliases[guild_id]:
+            await ctx.send("❌ No hay aliases configurados en este servidor.")
+            return
+        # Organizar aliases por comando
+        commands_with_aliases = {}
+        for alias, cmd_name in self.guild_aliases[guild_id].items():
+            if cmd_name not in commands_with_aliases:
+                commands_with_aliases[cmd_name] = []
+            commands_with_aliases[cmd_name].append(alias)
+        embed = discord.Embed(
+            title="🔗 Aliases del Servidor",
+            color=discord.Color.blue(),
+            description="Lista de todos los aliases configurados por comando"
+        )
+        for cmd_name, aliases in sorted(commands_with_aliases.items()):
+            aliases_str = ", ".join(f"`{alias}`" for alias in sorted(aliases))
+            embed.add_field(
+                name=f"Comando `{cmd_name}`",
+                value=aliases_str,
+                inline=False
+            )
+        await ctx.send(embed=embed)
     
     @commands.command(name='categorias')
     async def list_categories(self, ctx):
@@ -805,6 +825,16 @@ class CommandManager(commands.Cog):
             await ctx.send("❌ Error al guardar la configuración.")
             print(f"Error guardando configuración: {e}")
 
+    @commands.command(name='ping')
+    async def ping(self, ctx):
+        """Muestra el tiempo de respuesta del bot."""
+        import time
+        start = time.perf_counter()
+        msg = await ctx.send('🏓 Pong...')
+        end = time.perf_counter()
+        latency = (end - start) * 1000
+        await msg.edit(content=f'🏓 Pong! Latencia: `{int(latency)} ms`')
+
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
         """Detecta y ejecuta comandos personalizados"""
@@ -840,6 +870,34 @@ class CommandManager(commands.Cog):
         elif command_name in self.guild_aliases[guild_id]:
             original_name = self.guild_aliases[guild_id][command_name]
             await message.channel.send(self.guild_commands[guild_id][original_name].response)
+
+    @commands.Cog.listener()
+    async def on_command_error(self, ctx, error):
+        import traceback
+        embed = discord.Embed(
+            title="❌ Ocurrió un error al ejecutar el comando.",
+            color=discord.Color.red()
+        )
+        # Mensaje amigable según el tipo de error
+        if isinstance(error, commands.MissingPermissions):
+            embed.description = "No tienes permisos para usar este comando."
+        elif isinstance(error, commands.MissingRequiredArgument):
+            embed.description = f"Faltan argumentos requeridos: `{error.param.name}`."
+        elif isinstance(error, commands.CommandNotFound):
+            embed.description = "Ese comando no existe. Usa `.help` para ver la lista de comandos."
+        elif isinstance(error, commands.BadArgument):
+            embed.description = "Argumento inválido. Verifica el tipo de dato o formato."
+        else:
+            embed.description = f"{str(error)}"
+        # Sugerencia de ayuda
+        if ctx.command:
+            embed.set_footer(text=f"ℹ️ Usa .help {ctx.command.name} para ver cómo se usa correctamente.")
+        else:
+            embed.set_footer(text="ℹ️ Usa .help para ver la lista de comandos.")
+        await ctx.send(embed=embed)
+        # Loguear el error en consola para depuración
+        print(f"[ERROR] Comando: {getattr(ctx.command, 'name', 'desconocido')}")
+        print(''.join(traceback.format_exception(type(error), error, error.__traceback__)))
 
 async def setup(bot):
     await bot.add_cog(CommandManager(bot))

@@ -7,15 +7,133 @@ import logging
 from typing import List, Dict, Any, Optional, Set
 from utils.database import dbManager
 from datetime import datetime
+import os
+import json
+import pytz
 
 # Configure logging for debugging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+CACHE_FILE = "items_cache.json"
+CACHE_MAX_AGE_HOURS = 24 * 7
+
+COLOMBIA_TZ = pytz.timezone('America/Bogota')
 
 class SearchCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
+        self.items_cache: Optional[List[Dict[str, str]]] = None
+        self.items_cache_loaded: bool = False
+
+    def should_update_cache(self):
+        """Solo actualizar la caché los martes a las 11:00 AM hora Colombia (UTC-5)"""
+        now = datetime.now(COLOMBIA_TZ)
+        if now.weekday() == 1 and now.hour == 11:
+            return True
+        return False
+
+    def cache_file_exists_and_fresh(self):
+        if not os.path.exists(CACHE_FILE):
+            return False
+        if not self.should_update_cache():
+            return True  # Usar la caché aunque esté vieja
+        return False  # Forzar actualización solo si es martes 11:00 AM
+
+    def load_cache_from_disk(self):
+        if os.path.exists(CACHE_FILE):
+            try:
+                with open(CACHE_FILE, "r", encoding="utf-8") as f:
+                    self.items_cache = json.load(f)
+                    self.items_cache_loaded = True
+                    logger.info("Caché de ítems cargada desde disco.")
+            except Exception as e:
+                logger.error(f"Error leyendo la caché de ítems: {e}")
+                self.items_cache = []
+                self.items_cache_loaded = False
+
+    def save_cache_to_disk(self):
+        try:
+            with open(CACHE_FILE, "w", encoding="utf-8") as f:
+                json.dump(self.items_cache, f, ensure_ascii=False)
+            logger.info("Caché de ítems guardada en disco.")
+        except Exception as e:
+            logger.error(f"Error guardando la caché de ítems: {e}")
+
+    async def notify_owner_cache_updated(self):
+        try:
+            app_info = await self.bot.application_info()
+            owner = app_info.owner
+            if owner:
+                dt = datetime.now(COLOMBIA_TZ).strftime('%Y-%m-%d %H:%M:%S')
+                await owner.send(f"La caché de ítems de GW2 fue actualizada el {dt} (hora Colombia).")
+        except Exception as e:
+            logger.error(f"No se pudo notificar al owner sobre la actualización de la caché: {e}")
+
+    async def load_items_cache(self):
+        # 1. Intentar cargar desde disco si es reciente
+        if self.cache_file_exists_and_fresh():
+            self.load_cache_from_disk()
+            return
+        # 2. Si no existe o está vieja, descargar y actualizar solo los nuevos
+        self.items_cache = []
+        existing_ids = set()
+        if os.path.exists(CACHE_FILE):
+            try:
+                with open(CACHE_FILE, "r", encoding="utf-8") as f:
+                    self.items_cache = json.load(f)
+                    existing_ids = set(item['id'] for item in self.items_cache)
+            except Exception as e:
+                logger.error(f"Error leyendo la caché de ítems para actualizar: {e}")
+                self.items_cache = []
+        try:
+            async with aiohttp.ClientSession() as session:
+                # Obtener todos los IDs
+                async with session.get("https://api.guildwars2.com/v2/items") as resp:
+                    if resp.status != 200:
+                        return
+                    ids = await resp.json()
+                # Filtrar solo los nuevos
+                new_ids = [i for i in ids if str(i) not in existing_ids]
+                logger.info(f"Descargando {len(new_ids)} ítems nuevos para la caché...")
+                # Descargar detalles por lotes de 200
+                for i in range(0, len(new_ids), 200):
+                    chunk = new_ids[i:i+200]
+                    ids_param = ",".join(map(str, chunk))
+                    url = f"https://api.guildwars2.com/v2/items?ids={ids_param}&lang=en"
+                    async with session.get(url) as resp2:
+                        if resp2.status != 200:
+                            continue
+                        items = await resp2.json()
+                        for item in items:
+                            if 'name' in item and item['name']:
+                                self.items_cache.append({
+                                    'id': str(item['id']),
+                                    'name': item['name']
+                                })
+            self.items_cache_loaded = True
+            self.save_cache_to_disk()
+            await self.notify_owner_cache_updated()
+        except Exception as e:
+            logger.error(f"Error cargando la caché de ítems: {e}")
+
+    async def cog_load(self):
+        await self.load_items_cache()
+        logger.info("Caché de ítems de GW2 lista para autocompletado.")
+
+    async def search_autocomplete(self, interaction: discord.Interaction, current: str):
+        """Autocompletado para el parámetro item_name del comando /search usando caché local de nombres de ítems"""
+        if not self.items_cache_loaded:
+            await self.load_items_cache()
+        sugerencias = set()
+        current_lower = current.lower().strip()
+        if self.items_cache:
+            for item in self.items_cache:
+                if current_lower in item['name'].lower():
+                    sugerencias.add(item['name'])
+                if len(sugerencias) >= 25:
+                    break
+        return [app_commands.Choice(name=s, value=s) for s in list(sugerencias)[:25]]
 
     @app_commands.command(
         name="search",
@@ -24,6 +142,7 @@ class SearchCog(commands.Cog):
     @app_commands.describe(
         item_name="Name of the item to search for"
     )
+    @app_commands.autocomplete(item_name=search_autocomplete)
     async def search(
             self,
             interaction: discord.Interaction,

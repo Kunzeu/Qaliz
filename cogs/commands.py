@@ -541,7 +541,7 @@ class CommandManager(commands.Cog):
                     value="",
                     inline=False
                 )
-                # Mostrar comandos en bloques de 5 por línea, con formato de aliases
+                # Mostrar comandos en bloques de 7 por línea, con formato de aliases
                 cmd_names = []
                 for name, cmd in sorted(page_commands.items()):
                     alias_count = len(cmd.aliases)
@@ -552,8 +552,8 @@ class CommandManager(commands.Cog):
                     else:
                         alias_str = ""
                     cmd_names.append(f"`{name}`{alias_str}")
-                # Separar por coma en bloques de 5
-                lines = [", ".join(cmd_names[j:j+5]) for j in range(0, len(cmd_names), 5)]
+                # Separar por coma en bloques de 7
+                lines = [", ".join(cmd_names[j:j+7]) for j in range(0, len(cmd_names), 7)]
                 embed.add_field(
                     name=f"Comandos",
                     value="\n".join(lines),
@@ -619,8 +619,8 @@ class CommandManager(commands.Cog):
                         else:
                             alias_str = ""
                         cmd_names.append(f"`{cmd.name}`{alias_str}")
-                    # Separar por coma en bloques de 5
-                    lines = [", ".join(cmd_names[j:j+5]) for j in range(0, len(cmd_names), 5)]
+                    # Separar por coma en bloques de 7
+                    lines = [", ".join(cmd_names[j:j+7]) for j in range(0, len(cmd_names), 7)]
                     embed.add_field(
                         name=f"📁 {category_name} ({len(cmds)})",
                         value="\n".join(lines) or "No hay comandos",

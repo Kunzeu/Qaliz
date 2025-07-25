@@ -552,7 +552,8 @@ class CommandManager(commands.Cog):
                     else:
                         alias_str = ""
                     cmd_names.append(f"`{name}`{alias_str}")
-                lines = [" ".join(cmd_names[j:j+5]) for j in range(0, len(cmd_names), 5)]
+                # Separar por coma en bloques de 5
+                lines = [", ".join(cmd_names[j:j+5]) for j in range(0, len(cmd_names), 5)]
                 embed.add_field(
                     name=f"Comandos",
                     value="\n".join(lines),
@@ -618,7 +619,8 @@ class CommandManager(commands.Cog):
                         else:
                             alias_str = ""
                         cmd_names.append(f"`{cmd.name}`{alias_str}")
-                    lines = [" ".join(cmd_names[j:j+5]) for j in range(0, len(cmd_names), 5)]
+                    # Separar por coma en bloques de 5
+                    lines = [", ".join(cmd_names[j:j+5]) for j in range(0, len(cmd_names), 5)]
                     embed.add_field(
                         name=f"📁 {category_name} ({len(cmds)})",
                         value="\n".join(lines) or "No hay comandos",
@@ -875,34 +877,6 @@ class CommandManager(commands.Cog):
 
         # Solo si no es comando personalizado ni alias, procesar comandos normales:
         await self.bot.process_commands(message)
-
-    @commands.Cog.listener()
-    async def on_command_error(self, ctx, error):
-        import traceback
-        embed = discord.Embed(
-            title="❌ Ocurrió un error al ejecutar el comando.",
-            color=discord.Color.red()
-        )
-        # Mensaje amigable según el tipo de error
-        if isinstance(error, commands.MissingPermissions):
-            embed.description = "No tienes permisos para usar este comando."
-        elif isinstance(error, commands.MissingRequiredArgument):
-            embed.description = f"Faltan argumentos requeridos: `{error.param.name}`."
-        elif isinstance(error, commands.CommandNotFound):
-            embed.description = "Ese comando no existe. Usa `.help` para ver la lista de comandos."
-        elif isinstance(error, commands.BadArgument):
-            embed.description = "Argumento inválido. Verifica el tipo de dato o formato."
-        else:
-            embed.description = f"{str(error)}"
-        # Sugerencia de ayuda
-        if ctx.command:
-            embed.set_footer(text=f"ℹ️ Usa .help {ctx.command.name} para ver cómo se usa correctamente.")
-        else:
-            embed.set_footer(text="ℹ️ Usa .help para ver la lista de comandos.")
-        await ctx.send(embed=embed)
-        # Loguear el error en consola para depuración
-        print(f"[ERROR] Comando: {getattr(ctx.command, 'name', 'desconocido')}")
-        print(''.join(traceback.format_exception(type(error), error, error.__traceback__)))
 
 async def setup(bot):
     await bot.add_cog(CommandManager(bot))

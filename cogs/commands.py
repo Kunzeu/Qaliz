@@ -875,8 +875,8 @@ class CommandManager(commands.Cog):
             await message.channel.send(self.guild_commands[guild_id][original_name].response)
             return  # No procesar más, evitar error visual
 
-        # Solo si no es comando personalizado ni alias, procesar comandos normales:
-        await self.bot.process_commands(message)
+        # Si no es un comando personalizado, permitir que el bot procese comandos normales
+        # No llamar a process_commands manualmente para evitar duplicación
 
 async def setup(bot):
     await bot.add_cog(CommandManager(bot))

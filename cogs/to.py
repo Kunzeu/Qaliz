@@ -12,12 +12,14 @@ class TimeoutCog(commands.Cog):
         self.bot = bot
 
     @commands.command(name="to")
-    async def auto_timeout(self, ctx: commands.Context, duration: int = 60):
-        """Aplica un auto-timeout al usuario que ejecuta el comando por una duración especificada (en segundos, por defecto 60).
-        Uso: .to [duracion]
-        Máximo: 10 minutos (600 segundos).
+    async def auto_timeout(self, ctx: commands.Context, member: discord.Member = None, duration: int = 60):
+        """Aplica un timeout al usuario especificado o a sí mismo si no se especifica usuario.
+        Uso: .to [usuario] [duracion] o .to [duracion] (auto-timeout)
+        Máximo: 1000 minutos (6000 segundos).
         """
-        member = ctx.author  # El usuario que ejecuta el comando
+        # Si no se especifica miembro, se aplica a sí mismo (auto-timeout)
+        target = member or ctx.author
+        is_self_timeout = member is None
 
         # Verificar que el bot tiene permisos para moderar miembros
         if not ctx.guild.me.guild_permissions.moderate_members:
@@ -30,8 +32,19 @@ class TimeoutCog(commands.Cog):
             await ctx.send(embed=embed)
             return
 
+        # Verificar permisos si se aplica timeout a otro usuario
+        if not is_self_timeout and not ctx.author.guild_permissions.moderate_members:
+            embed = discord.Embed(
+                title="❌ Sin Permisos",
+                description="No tienes permisos para aplicar timeout a otros usuarios. Usa `.to [duracion]` para auto-timeout.",
+                color=discord.Color.red(),
+                timestamp=datetime.now()
+            )
+            await ctx.send(embed=embed)
+            return
+
         # Verificar que el miembro no sea el propietario del servidor o el bot
-        if member == ctx.guild.owner or member == self.bot.user:
+        if target == ctx.guild.owner or target == self.bot.user:
             embed = discord.Embed(
                 title="❌ No Permitido",
                 description="No puedes silenciar al propietario del servidor o al bot.",
@@ -58,17 +71,26 @@ class TimeoutCog(commands.Cog):
         if timeout_duration > max_duration:
             timeout_duration = max_duration  # Limitar silenciosamente a 10 minutos
 
-        # Aplicar el auto-timeout
+        # Aplicar el timeout
         try:
-            await member.timeout(timeout_duration, reason=f"Auto-timeout solicitado por {member} con comando .to")
+            if is_self_timeout:
+                reason = f"Auto-timeout solicitado por {target} con comando .to"
+                title = "⏰ Auto-Timeout Aplicado"
+                description = f"{target.mention}, te has silenciado por {duration} segundos."
+            else:
+                reason = f"Timeout aplicado por {ctx.author} a {target} con comando .to"
+                title = "⏰ Timeout Aplicado"
+                description = f"{target.mention} ha sido silenciado por {duration} segundos por {ctx.author.mention}."
+            
+            await target.timeout(timeout_duration, reason=reason)
             embed = discord.Embed(
-                title="⏰ Auto-Timeout Aplicado",
-                description=f"{member.mention}, te has silenciado por {duration} segundos.",
+                title=title,
+                description=description,
                 color=discord.Color.green(),
                 timestamp=datetime.now()
             )
             await ctx.send(embed=embed)
-            logger.info(f"Auto-timeout aplicado a {member.name}#{member.discriminator} por {duration} segundos (limitado a 600s si excede)")
+            logger.info(f"Timeout aplicado a {target.name}#{target.discriminator} por {duration} segundos")
         except discord.Forbidden:
             embed = discord.Embed(
                 title="❌ Sin Permisos",
@@ -77,7 +99,7 @@ class TimeoutCog(commands.Cog):
                 timestamp=datetime.now()
             )
             await ctx.send(embed=embed)
-            logger.error(f"Falta de permisos para aplicar timeout a {member.name}#{member.discriminator}")
+            logger.error(f"Falta de permisos para aplicar timeout a {target.name}#{target.discriminator}")
         except discord.HTTPException as e:
             embed = discord.Embed(
                 title="❌ Error",

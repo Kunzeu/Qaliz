@@ -238,7 +238,7 @@ ITEMS_MAP = {
     100752: {"mainName": "Relic of the Pack", "altNames": ["RPack", "Pack"]},
     
     # Event Items
-    35986: {"mainName": "Bazar", "altNames": ["express"]},
+    35986: {"mainName": "Personal Trader Express", "altNames": ["Bazar"]},
     36038: {"mainName": "Trick-or-Treat Bag", "altNames": ["tot"]},
     99956: {"mainName": "Enchanted Music Box", "altNames": ["music"]},
     96088: {"mainName": "Memory of Aurene", "altNames": ["Aurene", "Recuerdo de Aurene"]},
@@ -255,9 +255,9 @@ ITEMS_MAP = {
     93241: {"mainName": "Chatoyant Elixir", "altNames": ["Elixir de ágata", "agata", "Chatoyant, Elixir"]},
     24467: {"mainName": "Tiger's Eye Pebble", "altNames": ["Guijarro de ojo de tigre", "Guijarro", "tigre"]},
     104282:{"mainName": "Shard of Mistburned Barrens", "altNames": ["Esquirla de los Yermos de Pavesas de Niebla", "Yermos", "Barrens", "Pavesas", "Mistburned"]},
-    83008: {"mainName": "Yellow", "altNames": ["Piece of Rare Unidentified Gear", "Pieza de equipo excepcional sin identificar"]},
-    85016: {"mainName": "Blue", "altNames": ["Piece of Common Unidentified Gear", "Pieza de equipo común sin identificar"]},
-    84731: {"mainName": "Green", "altNames": ["Piece of Unidentified Gear", "Pieza de equipo sin identificar"]},
+    83008: {"mainName": "Piece of Rare Unidentified Gear", "altNames": ["Yellow", "Pieza de equipo excepcional sin identificar"]},
+    85016: {"mainName": "Piece of Common Unidentified Gear", "altNames": ["Blue", "Pieza de equipo común sin identificar"]},
+    84731: {"mainName": "Piece of Unidentified Gear", "altNames": ["Green", "Pieza de equipo sin identificar"]},
 }
 
 def find_object_id_by_name(name: str):

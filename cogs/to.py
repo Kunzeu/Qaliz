@@ -52,8 +52,8 @@ class TimeoutCog(commands.Cog):
             await ctx.send(embed=embed)
             return
 
-        # Calcular el tiempo de expiración (máximo 10 minutos = 600 segundos)
-        max_duration = timedelta(seconds=600)  # 10 minutos
+        # Calcular el tiempo de expiración (máximo 1000 minutos = 6000 segundos)
+        max_duration = timedelta(seconds=6000)  # 1000 minutos
         timeout_duration = timedelta(seconds=duration)
         if timeout_duration > max_duration:
             timeout_duration = max_duration  # Limitar silenciosamente a 10 minutos

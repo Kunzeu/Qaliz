@@ -34,7 +34,7 @@ class GiftPrices(commands.Cog):
 
             # Crear el embed con los precios
             embed = discord.Embed(
-                title="Prices for the OM, GOJM and GOJW",
+                title="Prices for the GOM, GOJM and GOJW",
                 description="These are the current prices of the Gifts:",
                 color=0x0099ff
             )

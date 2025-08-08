@@ -12,9 +12,9 @@ class TimeoutCog(commands.Cog):
         self.bot = bot
 
     @commands.command(name="to")
-    async def auto_timeout(self, ctx: commands.Context, member: discord.Member = None, duration: int = 60):
+    async def auto_timeout(self, ctx: commands.Context, duration: int = 60, member: discord.Member = None):
         """Aplica un timeout al usuario especificado o a sí mismo si no se especifica usuario.
-        Uso: .to [usuario] [duracion] o .to [duracion] (auto-timeout)
+        Uso: .to [duracion] [usuario] o .to [duracion] (auto-timeout)
         Máximo: 1000 minutos (6000 segundos).
         """
         # Si no se especifica miembro, se aplica a sí mismo (auto-timeout)

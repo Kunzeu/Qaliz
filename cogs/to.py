@@ -79,10 +79,16 @@ class TimeoutCog(commands.Cog):
             await ctx.send(embed=embed)
             return
 
-        # Calcular el tiempo de expiración (sin límite artificial)
+        # Validar límite máximo de Discord (28 días)
+        max_timeout = timedelta(days=28)
+        if timedelta(seconds=duration) > max_timeout:
+            await ctx.send("superas el limite permitido")
+            return
+
+        # Calcular el tiempo de expiración
         timeout_duration = timedelta(seconds=duration)
 
-        # Formatear duración en h:m:s para mostrar
+        # Formatear duración en h:m:s para mostrar (tras aplicar límites)
         total_seconds = int(timeout_duration.total_seconds())
         hours = total_seconds // 3600
         minutes = (total_seconds % 3600) // 60

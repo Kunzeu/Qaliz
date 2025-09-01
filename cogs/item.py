@@ -526,8 +526,8 @@ class ItemPrice(commands.Cog):
                     value=f"On sale: {cantidad_venta}\nOn buy orders: {cantidad_compra}",
                     inline=False
                 )
-                # Solo mostrar equivalentes si la rareza es Legendary
-                if rareza_objeto == "Legendary":
+                # Mostrar equivalentes en ectos para Legendary o para el item específico 83410
+                if rareza_objeto == "Legendary" or objeto_id == 83410:
                     if precio_ecto:
                         ectos_requeridos = math.ceil(precio_descuento / (precio_ecto * 0.9))
                         num_stacks_ectos = ectos_requeridos // 250

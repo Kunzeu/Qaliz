@@ -526,8 +526,9 @@ class ItemPrice(commands.Cog):
                     value=f"On sale: {cantidad_venta}\nOn buy orders: {cantidad_compra}",
                     inline=False
                 )
-                # Mostrar equivalentes en ectos para Legendary o para el item específico 83410
+                # Mostrar equivalentes según el tipo de item
                 if rareza_objeto == "Legendary" or objeto_id == 83410:
+                    # Para Legendary y item 83410: mostrar ambos equivalentes
                     if precio_ecto:
                         ectos_requeridos = math.ceil(precio_descuento / (precio_ecto * 0.9))
                         num_stacks_ectos = ectos_requeridos // 250
@@ -546,12 +547,41 @@ class ItemPrice(commands.Cog):
                             value=f"{num_stacks_monedas} stack{'s' if num_stacks_monedas != 1 else ''} and {monedas_adicionales} extra\nTotal: {monedas_misticas_requeridas} <:mc:1328507835478315140>",
                             inline=True
                         )
+                elif objeto_id == 19721:
+                    # Para Ectos (19721): solo mostrar equivalente en Mystic Coins
+                    if precio_moneda_mistica:
+                        monedas_misticas_requeridas = math.ceil(precio_descuento / (precio_moneda_mistica * 0.9))
+                        num_stacks_monedas = monedas_misticas_requeridas // 250
+                        monedas_adicionales = monedas_misticas_requeridas % 250
+                        embed.add_field(
+                            name="<:mc:1328507835478315140> Equivalent in Mystic Coins",
+                            value=f"{num_stacks_monedas} stack{'s' if num_stacks_monedas != 1 else ''} and {monedas_adicionales} extra\nTotal: {monedas_misticas_requeridas} <:mc:1328507835478315140>",
+                            inline=True
+                        )
+                elif objeto_id == 19976:
+                    # Para Mystic Coins (19976): solo mostrar equivalente en Ectos
+                    if precio_ecto:
+                        ectos_requeridos = math.ceil(precio_descuento / (precio_ecto * 0.9))
+                        num_stacks_ectos = ectos_requeridos // 250
+                        ectos_adicionales = ectos_requeridos % 250
+                        embed.add_field(
+                            name="<:Ecto:1328507640635986041> Equivalent in Ectos",
+                            value=f"{num_stacks_ectos} stack{'s' if num_stacks_ectos != 1 else ''} and {ectos_adicionales} extra\nTotal: {ectos_requeridos} <:Ecto:1328507640635986041>",
+                            inline=True
+                        )
                 # Ya no agrego el campo 'Copy name' al embed
                 embed.add_field(
                     name="🔗 Links",
                     value=f"[GW2BLTC](https://www.gw2bltc.com/en/item/{objeto_id}) • [Wiki](https://wiki.guildwars2.com/wiki/Special:Search/{urllib.parse.quote(nombre_objeto)})",
                     inline=False
                 )
+                # Agregar mensaje sobre el cálculo al 90%
+                if (rareza_objeto == "Legendary" or objeto_id == 83410 or objeto_id == 19721 or objeto_id == 19976):
+                    embed.add_field(
+                        name="ℹ️ Note",
+                        value="Equivalents are calculated at 90% TP value",
+                        inline=False
+                    )
                 embed.set_footer(text=f"ID: {objeto_id} • Rarity: {rareza_objeto}", icon_url=imagen_objeto)
                 await interaction.followup.send(embed=embed)
         except asyncio.TimeoutError:

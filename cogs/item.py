@@ -144,6 +144,7 @@ ITEMS_MAP = {
     24330: {"mainName": "Crystal Lodestone", "altNames": ["Cristal", "CrystalL"]},
     70842: {"mainName": "Mordrem Lodestone", "altNames": ["mordrem"]},
     24340: {"mainName": "Corrupted Lodestone", "altNames": ["Corrupta", "Corrupted"]},
+    24305: {"mainName": "Charged Lodestone", "altNames": ["Piedra imán cargada", "Lodestone"]},
     
     # Runes and Sigils
     89141: {"mainName": "Símbolo de mejora", "altNames": ["Mejora", "Enha"]},
@@ -248,7 +249,7 @@ ITEMS_MAP = {
     8920: {"mainName": "Heavy Loot Bag", "altNames": ["Saco de botín pesado", "Loot", "Heavy"]},
     70820: {"mainName": "Shard of Glory", "altNames": ["Gloria", "Esquirla de gloria", "PvP"]},
     68646: {"mainName": "Divine Lucky Envelope", "altNames": ["DLE", "Sobre de la suerte divino"]},
-    12238: {"mainName": "Lechuga", "altNames": ["Head of Lettuce"]},
+    12238: {"mainName": "Head of Lettuce", "altNames": ["Lechuga"]},
     75919: {"mainName": "Fractal Encryption", "altNames": ["Fractal"]},
     88045: {"mainName": "Glyph of Volatility", "altNames": ["glifo volatilidad", "volatilidad", "Volaty"]},
     36041: {"mainName": "Piece of Candy Corn", "altNames": ["Caramelo", "candy", "Trozo de caramelo", "trozo"]},

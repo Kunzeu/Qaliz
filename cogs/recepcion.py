@@ -35,7 +35,7 @@ Si vais a utilizar el canal de comercio acordaos de leer las normas en el mensaj
 Si solo puedes ver el apartado de roles es porque aún no has escogido el tuyo, pásate por el canal <id:customize>.
 
 
-Página web <https://www.true-farming.com/>
+Página web: <https://www.true-farming.com/>
 https://discord.com/invite/jTBcW49"""
 
 

@@ -51,6 +51,18 @@ MATERIALS = {
         {"name": "Large Fang", "itemId": 24356, "stackSize": 250, "type": "T5"},
         {"name": "Sharp Fang", "itemId": 24355, "stackSize": 50, "type": "T4"},
         {"name": "Fang", "itemId": 24354, "stackSize": 50, "type": "T3"}
+    ],
+    "Gift of Might": [
+        {"name": "Vicious Fang", "itemId": 24357, "stackSize": 250, "type": "T6"},
+        {"name": "Armored Scale", "itemId": 24289, "stackSize": 250, "type": "T6"},
+        {"name": "Vicious Claw", "itemId": 24351, "stackSize": 250, "type": "T6"},
+        {"name": "Ancient Bone", "itemId": 24358, "stackSize": 250, "type": "T6"}
+    ],
+    "Gift of Magic": [
+        {"name": "Vial of Powerful Blood", "itemId": 24295, "stackSize": 250, "type": "T6"},
+        {"name": "Powerful Venom Sac", "itemId": 24283, "stackSize": 250, "type": "T6"},
+        {"name": "Elaborate Totem", "itemId": 24300, "stackSize": 250, "type": "T6"},
+        {"name": "Pile of Crystalline Dust", "itemId": 24277, "stackSize": 250, "type": "T6"}
     ]
 }
 
@@ -114,8 +126,12 @@ class MaterialPriceCalculator:
         if price_data:  # If there's price data, display it
             total_price = sum(item['totalPrice'] for item in price_data)
             discounted_price = int(total_price * 0.9)  # 90% discount
-            embed.title = f"Gift of Condensed {category.capitalize()} Material Prices"
-            embed.description = f"Current Trading Post prices for Condensed {category} materials:"
+            if category in ["Gift of Might", "Gift of Magic"]:
+                embed.title = f"{category} Material Prices"
+                embed.description = f"Current Trading Post prices for {category} materials:"
+            else:
+                embed.title = f"Gift of Condensed {category.capitalize()} Material Prices"
+                embed.description = f"Current Trading Post prices for Condensed {category} materials:"
             embed.add_field(
                 name="Total Price (100%)",
                 value=MaterialPriceCalculator.calculate_coins(total_price),
@@ -135,12 +151,30 @@ class MaterialPriceCalculator:
                 ),
                 inline=False
             )
-            embed.set_thumbnail(
-                url="https://render.guildwars2.com/file/CCA4C2F8AF79D2EB0CFF381E3DDA3EA792BA7412/1302180.png" if category == "Might" else "https://render.guildwars2.com/file/09F42753049B20A54F6017B1F26A9447613016FE/1302179.png"
-            )
+            # Set thumbnail based on category
+            if category == "Might":
+                thumbnail_url = "https://render.guildwars2.com/file/CCA4C2F8AF79D2EB0CFF381E3DDA3EA792BA7412/1302180.png"
+            elif category == "Gift of Might":
+                thumbnail_url = "https://render.guildwars2.com/file/2F41032550D4024E184FAD6C1C0C14E53A09BCEA/455852.png"
+            elif category == "Gift of Magic":
+                thumbnail_url = "https://render.guildwars2.com/file/992EC43FA1317BED252DB9D09905C601160B0E01/455853.png"
+            else:  # Magic
+                thumbnail_url = "https://render.guildwars2.com/file/09F42753049B20A54F6017B1F26A9447613016FE/1302179.png"
+            
+            embed.set_thumbnail(url=thumbnail_url)
+            # Set footer icon based on category
+            if category == "Might":
+                footer_icon_url = "https://render.guildwars2.com/file/CCA4C2F8AF79D2EB0CFF381E3DDA3EA792BA7412/1302180.png"
+            elif category == "Gift of Might":
+                footer_icon_url = "https://render.guildwars2.com/file/2F41032550D4024E184FAD6C1C0C14E53A09BCEA/455852.png"
+            elif category == "Gift of Magic":
+                footer_icon_url = "https://render.guildwars2.com/file/992EC43FA1317BED252DB9D09905C601160B0E01/455853.png"
+            else:  # Magic
+                footer_icon_url = "https://render.guildwars2.com/file/09F42753049B20A54F6017B1F26A9447613016FE/1302179.png"
+            
             embed.set_footer(
                 text="Trading Post • Prices and items may vary",
-                icon_url="https://render.guildwars2.com/file/CCA4C2F8AF79D2EB0CFF381E3DDA3EA792BA7412/1302180.png" if category == "Might" else "https://render.guildwars2.com/file/09F42753049B20A54F6017B1F26A9447613016FE/1302179.png"
+                icon_url=footer_icon_url
             )
 
         embed.timestamp = discord.utils.utcnow()
@@ -164,7 +198,11 @@ class MaterialCommand(commands.Cog):
                 discord.SelectOption(label="Condensed Magic", value="Magic",
                                      description="View Condensed Magic prices"),
                 discord.SelectOption(label="Condensed Might", value="Might",
-                                     description="View Condensed Might prices")
+                                     description="View Condensed Might prices"),
+                discord.SelectOption(label="Gift of Might", value="Gift of Might",
+                                     description="View Gift of Might prices"),
+                discord.SelectOption(label="Gift of Magic", value="Gift of Magic",
+                                     description="View Gift of Magic prices")
             ]
             super().__init__(placeholder="Choose a category...", min_values=1, max_values=1, options=options)
             self.cog = cog
@@ -223,7 +261,7 @@ class MaterialCommand(commands.Cog):
 
     @app_commands.command(
         name="materials",
-        description="Shows material prices for Condensed Magic or Might"
+        description="Shows material prices for Condensed Magic, Condensed Might, Gift of Might, or Gift of Magic"
     )
     async def materials(self, interaction: discord.Interaction):
         await interaction.response.defer(ephemeral=False)

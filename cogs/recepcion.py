@@ -70,68 +70,29 @@ class WelcomeMessageModal(discord.ui.Modal):
             def escape_for_regex(text):
                 return re.escape(text)
             
-            # Buscar y reemplazar el mensaje (patrón flexible que funciona con cualquier contenido)
-            pattern = r'WELCOME_MESSAGE = """¡RECEPCIÓN!
-
-¡Os doy la bienvenida a mi servidor de Discord creado para vosotros!
-
-Debajo tenéis canales de todo tipo para que podáis informaros de todo lo relacionado con el contenido que voy creando y cositas que tengan que ver con aquello de lo que creo contenido.
-
-**Contenido en Video:**
-[Directos en Twitch](<https://twitch.tv/vortus43>)
-[Canal de YouTube](<https://www.youtube.com/vortus>)
-[Canal secundario de YouTube con Variety](<https://www.youtube.com/@VortusGaming>)
-[Canal de directos resubidos](<https://www.youtube.com/@Vortus43TV>)
-
-**Otras redes sociales:**
-[Recordad podéis seguirme en mi Twitter](<https://twitter.com/vortus43>)
-[Sígueme en Instagram para ver mi bella cara y saber cuando abro Stream](<https://instagram.com/chibivortus>)
-
-Conviértete en mi Patreon y te acceso a cosas exclusivas como sorteos y coaching de Gold Making en Guild Wars 2 😉
-Toda la info del Patreon en: <#702159691404279898> 🥳
-
-Podéis conseguir cofres de Streamloots de mi canal de Twitch en:
-[Streamloots](<https://www.streamloots.com/vortus43>)
-
-Información adicional:
-Si vais a utilizar el canal de comercio acordaos de leer las normas en el mensaje fijado.
-Si solo puedes ver el apartado de roles es porque aún no has escogido el tuyo, pásate por el canal <id:customize>.
-
-
-Página web <https://www.true-farming.com/>
-https://discord.com/invite/jTBcW49"""'
-            new_message = f'WELCOME_MESSAGE = """¡RECEPCIÓN!
-
-¡Os doy la bienvenida a mi servidor de Discord creado para vosotros!
-
-Debajo tenéis canales de todo tipo para que podáis informaros de todo lo relacionado con el contenido que voy creando y cositas que tengan que ver con aquello de lo que creo contenido.
-
-**Contenido en Video:**
-[Directos en Twitch](<https://twitch.tv/vortus43>)
-[Canal de YouTube](<https://www.youtube.com/vortus>)
-[Canal secundario de YouTube con Variety](<https://www.youtube.com/@VortusGaming>)
-[Canal de directos resubidos](<https://www.youtube.com/@Vortus43TV>)
-
-**Otras redes sociales:**
-[Recordad podéis seguirme en mi Twitter](<https://twitter.com/vortus43>)
-[Sígueme en Instagram para ver mi bella cara y saber cuando abro Stream](<https://instagram.com/chibivortus>)
-
-Conviértete en mi Patreon y te acceso a cosas exclusivas como sorteos y coaching de Gold Making en Guild Wars 2 😉
-Toda la info del Patreon en: <#702159691404279898> 🥳
-
-Podéis conseguir cofres de Streamloots de mi canal de Twitch en:
-[Streamloots](<https://www.streamloots.com/vortus43>)
-
-Información adicional:
-Si vais a utilizar el canal de comercio acordaos de leer las normas en el mensaje fijado.
-Si solo puedes ver el apartado de roles es porque aún no has escogido el tuyo, pásate por el canal <id:customize>.
-
-
-Página web <https://www.true-farming.com/>
-https://discord.com/invite/jTBcW49"""'
+            # Buscar y reemplazar el mensaje usando un enfoque más simple
+            old_message_start = 'WELCOME_MESSAGE = """'
+            old_message_end = '"""'
+            
+            # Encontrar el inicio y fin del mensaje actual
+            start_idx = content.find(old_message_start)
+            if start_idx == -1:
+                await interaction.followup.send("❌ No se pudo encontrar el mensaje actual en el archivo.", ephemeral=True)
+                return
+                
+            # Buscar el final del mensaje (después de las tres comillas)
+            end_idx = content.find(old_message_end, start_idx + len(old_message_start))
+            if end_idx == -1:
+                await interaction.followup.send("❌ Formato de mensaje inválido en el archivo.", ephemeral=True)
+                return
+                
+            end_idx += len(old_message_end)
+            
+            # Crear el nuevo mensaje
+            new_message = f'WELCOME_MESSAGE = """{self.mensaje_input.value}"""'
             
             # Reemplazar el mensaje en el contenido
-            updated_content = re.sub(pattern, new_message, content, flags=re.DOTALL)
+            updated_content = content[:start_idx] + new_message + content[end_idx:]
             
             # Escribir el archivo actualizado
             with open(file_path, 'w', encoding='utf-8') as f:

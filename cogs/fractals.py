@@ -10,7 +10,7 @@ class Fractals(commands.Cog):
         self.bot = bot
         # Complete rotations (same format as before)
         self.t4_rotations = [
-             [{"level": 96, "name": "Nightmare"}, {"level": 86, "name": "Snowblind"},
+            [{"level": 96, "name": "Nightmare"}, {"level": 86, "name": "Snowblind"},
              {"level": 92, "name": "Volcanic"}],
             [{"level": 93, "name": "Aetherblade"}, {"level": 82, "name": "Thaumanova Reactor"},
              {"level": 79, "name": "Uncategorized"}],

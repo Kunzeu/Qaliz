@@ -4,14 +4,18 @@ from discord.ext import commands
 import pytz
 from datetime import datetime
 
-# Diccionario de zonas horarias y banderas
-timezones = {
-    "🇪🇸": "Europe/Madrid",
-    "🇦🇷": "America/Argentina/Buenos_Aires",
-    "🇨🇱 🇩🇴": "America/Santo_Domingo",
-    "🇨🇴 🇵🇪": "America/Bogota",
-    "🇲🇽 🇸🇻": "America/Mexico_City",
-}
+# Lista de países con sus banderas y zonas horarias
+# Cada país está definido individualmente para poder agruparlos dinámicamente
+countries = [
+    ("🇪🇸", "Europe/Madrid"),
+    ("🇦🇷", "America/Argentina/Buenos_Aires"),
+    ("🇨🇱", "America/Santiago"),  # Chile - maneja automáticamente cambios de horario
+    ("🇩🇴", "America/Santo_Domingo"),  # República Dominicana
+    ("🇨🇴", "America/Bogota"),
+    ("🇵🇪", "America/Lima"),
+    ("🇲🇽", "America/Mexico_City"),
+    ("🇸🇻", "America/El_Salvador"),
+]
 
 # Emoji personalizado para separar los resultados
 line3Emoji = '<:line3:1328869908188237884>'  # Asegúrate de que este sea un emoji válido
@@ -25,27 +29,37 @@ class Hora(commands.Cog):
         # Obtener la hora actual en UTC
         now = datetime.now(pytz.utc)
 
-        # Construir la respuesta con la hora de cada zona horaria
-        responses = ["La hora es:"]
-        first = True  # Variable para verificar si es el primer país
-        last = True
-
-        for flag, timezone in timezones.items():
+        # Calcular la hora de cada país
+        country_times = []
+        for flag, timezone_str in countries:
             try:
-                # Convertir la hora a la zona horaria especificada
-                tz = pytz.timezone(timezone)
+                tz = pytz.timezone(timezone_str)
                 date_time_in_zone = now.astimezone(tz)
-                formatted_time = date_time_in_zone.strftime('%H:%M')  # Formatear la hora
-                
-                # Solo agregar el emoji después del primer país
-                if first:
-                    responses.append(f"{flag} {formatted_time}")
-                    first = False  # Desactivar el primer país
-                else:
-                    responses.append(f"{line3Emoji} {flag} {formatted_time}")
+                formatted_time = date_time_in_zone.strftime('%H:%M')
+                country_times.append((flag, formatted_time, timezone_str))
             except Exception as e:
-                print(f"Error obteniendo la hora para {timezone}: {e}")
-                responses.append(f"{flag} N/A")
+                print(f"Error obteniendo la hora para {timezone_str}: {e}")
+                country_times.append((flag, "N/A", timezone_str))
+
+        # Agrupar países por hora
+        time_groups = {}
+        for flag, time_str, timezone_str in country_times:
+            if time_str not in time_groups:
+                time_groups[time_str] = []
+            time_groups[time_str].append(flag)
+
+        # Construir la respuesta agrupando países con la misma hora
+        responses = ["La hora es:"]
+        first = True
+
+        for time_str in sorted(time_groups.keys()):
+            flags = " ".join(time_groups[time_str])
+            
+            if first:
+                responses.append(f"{flags} {time_str}")
+                first = False
+            else:
+                responses.append(f"{line3Emoji} {flags} {time_str}")
 
         # Enviar la respuesta
         await interaction.response.send_message(" ".join(responses))

@@ -96,15 +96,20 @@ class AntiSpam(commands.Cog):
         config = self.guild_configs[guild_id]
         
         if not config['enabled']:
+            logger.debug(f"Protección desactivada para servidor {guild_id}")
             return
         
         # Verificar si el usuario/canal está exento
         if self._is_exempt(message.author, message.channel):
+            logger.debug(f"Usuario {message.author} o canal {message.channel.name} está exento")
             return
         
         # Solo procesar mensajes con archivos adjuntos
-        if not self._has_attachments(message):
+        has_attachments = self._has_attachments(message)
+        if not has_attachments:
             return
+        
+        logger.debug(f"Procesando mensaje con attachments de {message.author} en {message.channel.name}")
         
         user_id = message.author.id
         current_time = datetime.now()
@@ -125,15 +130,18 @@ class AntiSpam(commands.Cog):
         message_count = len(recent_messages)
         unique_channels = len(set(ch for _, ch, _ in recent_messages))
         
+        # Log para debugging
+        logger.info(f"Usuario {message.author} ({user_id}): {message_count} mensajes en {unique_channels} canales (máx: {config['max_messages']} mensajes, {config['max_channels']} canales)")
+        
         # Verificar si es spam
         is_spam = False
         spam_reason = ""
         
-        if message_count > config['max_messages']:
+        if message_count >= config['max_messages']:
             is_spam = True
             spam_reason = f"Demasiados mensajes con imágenes ({message_count} en {time_window}s, máximo: {config['max_messages']})"
         
-        if unique_channels > config['max_channels']:
+        if unique_channels >= config['max_channels']:
             is_spam = True
             spam_reason = f"Mensajes con imágenes en múltiples canales ({unique_channels} canales, máximo: {config['max_channels']})"
         
@@ -142,25 +150,30 @@ class AntiSpam(commands.Cog):
             
             # Eliminar mensajes spam
             if config['delete_messages']:
-                messages_to_delete = [msg_id for _, _, msg_id in recent_messages]
                 deleted_count = 0
                 
-                for msg_id in messages_to_delete:
+                for ts, ch_id, msg_id in recent_messages:
                     try:
-                        msg = await message.channel.fetch_message(msg_id)
-                        await msg.delete()
-                        deleted_count += 1
-                    except (discord.NotFound, discord.Forbidden, discord.HTTPException) as e:
-                        logger.debug(f"No se pudo eliminar mensaje {msg_id}: {e}")
-                        # Intentar eliminar desde otros canales
-                        for channel in message.guild.text_channels:
-                            try:
-                                msg = await channel.fetch_message(msg_id)
-                                await msg.delete()
-                                deleted_count += 1
-                                break
-                            except:
-                                continue
+                        # Obtener el canal correcto
+                        channel_obj = message.guild.get_channel(ch_id)
+                        if not channel_obj:
+                            logger.warning(f"No se pudo encontrar el canal {ch_id}")
+                            continue
+                        
+                        # Intentar eliminar el mensaje
+                        try:
+                            msg = await channel_obj.fetch_message(msg_id)
+                            await msg.delete()
+                            deleted_count += 1
+                            logger.info(f"Mensaje {msg_id} eliminado del canal {channel_obj.name}")
+                        except discord.NotFound:
+                            logger.debug(f"Mensaje {msg_id} no encontrado (ya eliminado?)")
+                        except discord.Forbidden:
+                            logger.warning(f"Sin permisos para eliminar mensaje {msg_id} en canal {channel_obj.name}")
+                        except discord.HTTPException as e:
+                            logger.error(f"Error HTTP al eliminar mensaje {msg_id}: {e}")
+                    except Exception as e:
+                        logger.error(f"Error eliminando mensaje {msg_id} del canal {ch_id}: {e}")
                 
                 # Enviar advertencia al canal
                 try:

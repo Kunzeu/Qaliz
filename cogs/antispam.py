@@ -10,16 +10,14 @@ logger = logging.getLogger(__name__)
 class AntiSpam(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        # Rastrea mensajes recientes por usuario: {user_id: [(timestamp, channel_id, message_id), ...]}
         self.user_messages = defaultdict(list)
-        # Configuración por servidor: {guild_id: {config}}
         self.guild_configs = defaultdict(lambda: {
             'enabled': True,
-            'time_window': 10,  # Ventana de tiempo en segundos
+            'time_window': 20,  # Ventana de tiempo en segundos
             'max_messages': 3,  # Máximo de mensajes con imágenes en la ventana
             'max_channels': 2,  # Máximo de canales diferentes en la ventana
             'delete_messages': True,  # Eliminar mensajes spam
-            'timeout_duration': 86400,  # Duración del timeout en segundos (24 minutos)
+            'timeout_duration': 86400,  # Duración del timeout en segundos (24 horas)
             'timeout_enabled': True,  # Aplicar timeout automático
             'exempt_roles': [],  # Roles exentos de la protección
             'exempt_channels': []  # Canales exentos de la protección
@@ -65,11 +63,9 @@ class AntiSpam(commands.Cog):
         guild_id = member.guild.id
         config = self.guild_configs[guild_id]
         
-        # Verificar si el canal está exento
         if channel.id in config['exempt_channels']:
             return True
         
-        # Verificar si el usuario tiene un rol exento
         member_role_ids = {role.id for role in member.roles}
         if any(role_id in config['exempt_roles'] for role_id in member_role_ids):
             return True
@@ -83,15 +79,12 @@ class AntiSpam(commands.Cog):
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
         """Detecta y maneja mensajes spam"""
-        # Ignorar bots
         if message.author.bot:
             return
         
-        # Ignorar mensajes en DMs
         if not message.guild:
             return
         
-        # Verificar si la protección está habilitada para este servidor
         guild_id = message.guild.id
         config = self.guild_configs[guild_id]
         
@@ -99,12 +92,10 @@ class AntiSpam(commands.Cog):
             logger.debug(f"Protección desactivada para servidor {guild_id}")
             return
         
-        # Verificar si el usuario/canal está exento
         if self._is_exempt(message.author, message.channel):
             logger.debug(f"Usuario {message.author} o canal {message.channel.name} está exento")
             return
         
-        # Solo procesar mensajes con archivos adjuntos
         has_attachments = self._has_attachments(message)
         if not has_attachments:
             return
@@ -115,10 +106,8 @@ class AntiSpam(commands.Cog):
         current_time = datetime.now()
         channel_id = message.channel.id
         
-        # Agregar este mensaje al registro
         self.user_messages[user_id].append((current_time, channel_id, message.id))
         
-        # Filtrar mensajes fuera de la ventana de tiempo
         time_window = config['time_window']
         recent_messages = [
             (ts, ch, msg_id) for ts, ch, msg_id in self.user_messages[user_id]
@@ -126,14 +115,11 @@ class AntiSpam(commands.Cog):
         ]
         self.user_messages[user_id] = recent_messages
         
-        # Contar mensajes y canales únicos
         message_count = len(recent_messages)
         unique_channels = len(set(ch for _, ch, _ in recent_messages))
         
-        # Log para debugging
         logger.info(f"Usuario {message.author} ({user_id}): {message_count} mensajes en {unique_channels} canales (máx: {config['max_messages']} mensajes, {config['max_channels']} canales)")
         
-        # Verificar si es spam
         is_spam = False
         spam_reason = ""
         
@@ -148,19 +134,16 @@ class AntiSpam(commands.Cog):
         if is_spam:
             logger.warning(f"Spam detectado: {message.author} ({message.author.id}) - {spam_reason}")
             
-            # Eliminar mensajes spam
             if config['delete_messages']:
                 deleted_count = 0
                 
                 for ts, ch_id, msg_id in recent_messages:
                     try:
-                        # Obtener el canal correcto
                         channel_obj = message.guild.get_channel(ch_id)
                         if not channel_obj:
                             logger.warning(f"No se pudo encontrar el canal {ch_id}")
                             continue
                         
-                        # Intentar eliminar el mensaje
                         try:
                             msg = await channel_obj.fetch_message(msg_id)
                             await msg.delete()
@@ -175,7 +158,6 @@ class AntiSpam(commands.Cog):
                     except Exception as e:
                         logger.error(f"Error eliminando mensaje {msg_id} del canal {ch_id}: {e}")
                 
-                # Enviar advertencia al canal
                 try:
                     embed = discord.Embed(
                         title="⚠️ Mensajes Eliminados por Spam",
@@ -188,7 +170,6 @@ class AntiSpam(commands.Cog):
                 except:
                     pass
             
-            # Aplicar timeout
             if config['timeout_enabled'] and message.guild.me.guild_permissions.moderate_members:
                 try:
                     timeout_duration = timedelta(seconds=config['timeout_duration'])
@@ -199,7 +180,6 @@ class AntiSpam(commands.Cog):
                 except Exception as e:
                     logger.error(f"Error aplicando timeout: {e}")
             
-            # Limpiar el registro del usuario después de detectar spam
             if user_id in self.user_messages:
                 del self.user_messages[user_id]
 

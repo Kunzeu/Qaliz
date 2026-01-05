@@ -3,19 +3,9 @@ from discord import app_commands
 from discord.ext import commands
 import aiohttp
 import math
-from typing import Dict, List, Set, Tuple, Optional
-import urllib
-
-# Bidirectional mapping of item IDs and names
-
-
-import discord
-from discord.ext import commands
-from discord import app_commands
-import aiohttp
-import urllib.parse
-import math
 import asyncio
+from typing import Dict, List, Set, Tuple, Optional
+import urllib.parse
 
 # Sets for special item categories
 EXCLUDED_LEGENDARY_ITEMS = {96978, 96722, 103351}
@@ -147,34 +137,186 @@ ITEMS_MAP = {
     24340: {"mainName": "Corrupted Lodestone", "altNames": ["Corrupta", "Corrupted"]},
     24305: {"mainName": "Charged Lodestone", "altNames": ["Piedra imán cargada", "Lodestone"]},
     
-    # Runes and Sigils
+    # Runes and Sigils - Symbols and Charms
     89141: {"mainName": "Symbol of Enhancement", "altNames": ["Mejora", "Enha"]},
     89182: {"mainName": "Symbol of Pain", "altNames": ["Dolor", "Pain"]},
     89098: {"mainName": "Symbol of Control", "altNames": ["Control"]},
     89103: {"mainName": "Charm of Brilliance", "altNames": ["Brilliance"]},
     89216: {"mainName": "Charm of Skill", "altNames": ["Skill"]},
     89258: {"mainName": "Charm of Potence", "altNames": ["Potence"]},
-    74326: {"mainName": "Superior Sigil of Transference", "altNames": ["Transferencia", "Trans"]},
-    44944: {"mainName": "Superior Sigil of Bursting", "altNames": ["Estallido", "Bursting"]},
-    24562: {"mainName": "Superior Sigil of Mischief", "altNames": ["Fechorias", "Mischief"]},
-    68436: {"mainName": "Superior Sigil of Strength", "altNames": ["Fortaleza", "Strength"]},
-    48911: {"mainName": "Superior Sigil of Torment", "altNames": ["Tormento", "Torment"]},
-    24609: {"mainName": "Superior Sigil of Doom", "altNames": ["Condena", "Doom"]},
-    44950: {"mainName": "Superior Sigil of Malice", "altNames": ["Malicia", "Malice"]},
-    24639: {"mainName": "Superior Sigil of Paralyzation", "altNames": ["Paralisis", "Paralyzation"]},
     
-    # Runes
-    24800: {"mainName": "Superior Rune of Elementalist", "altNames": ["Elementalista", "Elementalist"]},
-    24818: {"mainName": "Superior Rune of Thief", "altNames": ["Ladrón", "ladron", "thief"]},
-    24830: {"mainName": "Superior Rune of Adventurer", "altNames": ["Aventurero", "Adventurer"]},
-    44956: {"mainName": "Superior Rune of Torment", "altNames": ["Runa Tormento", "STorment"]},
-    24720: {"mainName": "Superior Rune of Speed", "altNames": ["Velocidad", "Speed"]},
-    24836: {"mainName": "Superior Rune of Schoolar", "altNames": ["Erudito", "Schoolar"]},
-    24833: {"mainName": "Superior Rune of Brawler", "altNames": ["Pendenciero", "Brawler"]},
-    89999: {"mainName": "Superior Rune of Fireworks", "altNames": ["Fuego", "Fireworks"]},
-    24762: {"mainName": "Superior Rune of Krait", "altNames": ["Krait"]},
-    24839: {"mainName": "Superior Rune of Water", "altNames": ["agua", "water"]},
-    74978: {"mainName": "Superior Rune of the Dragonhunter", "altNames": ["Dragon"]},
+    # Superior Sigils - Common and Meta
+    74326: {"mainName": "Superior Sigil of Transference", "altNames": ["Transferencia", "Trans", "Sigil Transference"]},
+    44944: {"mainName": "Superior Sigil of Bursting", "altNames": ["Estallido", "Bursting", "Sigil Bursting"]},
+    24562: {"mainName": "Superior Sigil of Mischief", "altNames": ["Fechorias", "Mischief", "Sigil Mischief"]},
+    68436: {"mainName": "Superior Sigil of Strength", "altNames": ["Fortaleza", "Strength", "Sigil Strength"]},
+    48911: {"mainName": "Superior Sigil of Torment", "altNames": ["Tormento", "Torment", "Sigil Torment"]},
+    24609: {"mainName": "Superior Sigil of Doom", "altNames": ["Condena", "Doom", "Sigil Doom"]},
+    44950: {"mainName": "Superior Sigil of Malice", "altNames": ["Malicia", "Malice", "Sigil Malice"]},
+    24639: {"mainName": "Superior Sigil of Paralyzation", "altNames": ["Paralisis", "Paralyzation", "Sigil Paralyzation"]},
+    24554: {"mainName": "Superior Sigil of Force", "altNames": ["Fuerza", "Force", "Sigil Force"]},
+    24555: {"mainName": "Superior Sigil of Accuracy", "altNames": ["Precision", "Accuracy", "Sigil Accuracy"]},
+    24556: {"mainName": "Superior Sigil of Frailty", "altNames": ["Fragilidad", "Frailty", "Sigil Frailty"]},
+    24557: {"mainName": "Superior Sigil of Impact", "altNames": ["Impacto", "Impact", "Sigil Impact"]},
+    24558: {"mainName": "Superior Sigil of Air", "altNames": ["Aire", "Air", "Sigil Air"]},
+    24559: {"mainName": "Superior Sigil of Earth", "altNames": ["Tierra", "Earth", "Sigil Earth"]},
+    24560: {"mainName": "Superior Sigil of Fire", "altNames": ["Fuego", "Fire", "Sigil Fire"]},
+    24561: {"mainName": "Superior Sigil of Ice", "altNames": ["Hielo", "Ice", "Sigil Ice"]},
+    24563: {"mainName": "Superior Sigil of Water", "altNames": ["Agua", "Water", "Sigil Water"]},
+    24564: {"mainName": "Superior Sigil of Purity", "altNames": ["Pureza", "Purity", "Sigil Purity"]},
+    24565: {"mainName": "Superior Sigil of Nullification", "altNames": ["Anulacion", "Nullification", "Sigil Nullification"]},
+    24566: {"mainName": "Superior Sigil of Generosity", "altNames": ["Generosidad", "Generosity", "Sigil Generosity"]},
+    24567: {"mainName": "Superior Sigil of Benevolence", "altNames": ["Benevolencia", "Benevolence", "Sigil Benevolence"]},
+    24568: {"mainName": "Superior Sigil of Renewal", "altNames": ["Renovacion", "Renewal", "Sigil Renewal"]},
+    24569: {"mainName": "Superior Sigil of Energy", "altNames": ["Energia", "Energy", "Sigil Energy"]},
+    24570: {"mainName": "Superior Sigil of Concentration", "altNames": ["Concentracion", "Concentration", "Sigil Concentration"]},
+    24571: {"mainName": "Superior Sigil of Agility", "altNames": ["Agilidad", "Agility", "Sigil Agility"]},
+    24572: {"mainName": "Superior Sigil of Momentum", "altNames": ["Momento", "Momentum", "Sigil Momentum"]},
+    24573: {"mainName": "Superior Sigil of Rage", "altNames": ["Ira", "Rage", "Sigil Rage"]},
+    24574: {"mainName": "Superior Sigil of Demons", "altNames": ["Demonios", "Demons", "Sigil Demons"]},
+    24575: {"mainName": "Superior Sigil of Geomancy", "altNames": ["Geomancia", "Geomancy", "Sigil Geomancy"]},
+    24576: {"mainName": "Superior Sigil of Hydromancy", "altNames": ["Hidromancia", "Hydromancy", "Sigil Hydromancy"]},
+    24577: {"mainName": "Superior Sigil of Serpent Slaying", "altNames": ["Serpiente", "Serpent", "Sigil Serpent"]},
+    24578: {"mainName": "Superior Sigil of Undead Slaying", "altNames": ["No muerto", "Undead", "Sigil Undead"]},
+    24579: {"mainName": "Superior Sigil of Demon Slaying", "altNames": ["Demonio", "Demon", "Sigil Demon"]},
+    24580: {"mainName": "Superior Sigil of Destroyer Slaying", "altNames": ["Destructor", "Destroyer", "Sigil Destroyer"]},
+    24581: {"mainName": "Superior Sigil of Grawl Slaying", "altNames": ["Grawl", "Sigil Grawl"]},
+    24582: {"mainName": "Superior Sigil of Icebrood Slaying", "altNames": ["Hielo", "Icebrood", "Sigil Icebrood"]},
+    24583: {"mainName": "Superior Sigil of Elemental Slaying", "altNames": ["Elemental", "Sigil Elemental"]},
+    24584: {"mainName": "Superior Sigil of Ogre Slaying", "altNames": ["Ogro", "Ogre", "Sigil Ogre"]},
+    24585: {"mainName": "Superior Sigil of Krait Slaying", "altNames": ["Krait", "Sigil Krait"]},
+    24586: {"mainName": "Superior Sigil of Outlaw Slaying", "altNames": ["Forajido", "Outlaw", "Sigil Outlaw"]},
+    24587: {"mainName": "Superior Sigil of Centaur Slaying", "altNames": ["Centauro", "Centaur", "Sigil Centaur"]},
+    24588: {"mainName": "Superior Sigil of Inquest Slaying", "altNames": ["Interrogador", "Inquest", "Sigil Inquest"]},
+    24589: {"mainName": "Superior Sigil of Dredge Slaying", "altNames": ["Dredge", "Sigil Dredge"]},
+    24590: {"mainName": "Superior Sigil of Grawl Slaying", "altNames": ["Grawl", "Sigil Grawl"]},
+    24591: {"mainName": "Superior Sigil of Sons of Svanir Slaying", "altNames": ["Svanir", "Sigil Svanir"]},
+    24592: {"mainName": "Superior Sigil of Flame Legion Slaying", "altNames": ["Legion", "Flame", "Sigil Flame"]},
+    24593: {"mainName": "Superior Sigil of Bandit Slaying", "altNames": ["Bandido", "Bandit", "Sigil Bandit"]},
+    24594: {"mainName": "Superior Sigil of Svanir Slaying", "altNames": ["Svanir", "Sigil Svanir"]},
+    24595: {"mainName": "Superior Sigil of Wrath", "altNames": ["Ira", "Wrath", "Sigil Wrath"]},
+    24596: {"mainName": "Superior Sigil of Luck", "altNames": ["Suerte", "Luck", "Sigil Luck"]},
+    24597: {"mainName": "Superior Sigil of Perception", "altNames": ["Percepcion", "Perception", "Sigil Perception"]},
+    24598: {"mainName": "Superior Sigil of Smoldering", "altNames": ["Humeante", "Smoldering", "Sigil Smoldering"]},
+    24599: {"mainName": "Superior Sigil of Chilling", "altNames": ["Helado", "Chilling", "Sigil Chilling"]},
+    24600: {"mainName": "Superior Sigil of Venom", "altNames": ["Veneno", "Venom", "Sigil Venom"]},
+    24601: {"mainName": "Superior Sigil of Debility", "altNames": ["Debilidad", "Debility", "Sigil Debility"]},
+    24602: {"mainName": "Superior Sigil of Blight", "altNames": ["Plaga", "Blight", "Sigil Blight"]},
+    24603: {"mainName": "Superior Sigil of Perplexity", "altNames": ["Perplejidad", "Perplexity", "Sigil Perplexity"]},
+    24604: {"mainName": "Superior Sigil of Corruption", "altNames": ["Corrupcion", "Corruption", "Sigil Corruption"]},
+    24605: {"mainName": "Superior Sigil of Battle", "altNames": ["Batalla", "Battle", "Sigil Battle"]},
+    24606: {"mainName": "Superior Sigil of Bloodlust", "altNames": ["Sed", "Bloodlust", "Sigil Bloodlust"]},
+    24607: {"mainName": "Superior Sigil of Blood", "altNames": ["Sangre", "Blood", "Sigil Blood"]},
+    24608: {"mainName": "Superior Sigil of Life", "altNames": ["Vida", "Life", "Sigil Life"]},
+    24610: {"mainName": "Superior Sigil of Leeching", "altNames": ["Sangrado", "Leeching", "Sigil Leeching"]},
+    24611: {"mainName": "Superior Sigil of Restoration", "altNames": ["Restauracion", "Restoration", "Sigil Restoration"]},
+    24612: {"mainName": "Superior Sigil of Cleansing", "altNames": ["Limpieza", "Cleansing", "Sigil Cleansing"]},
+    24613: {"mainName": "Superior Sigil of Hydromancy", "altNames": ["Hidromancia", "Hydromancy", "Sigil Hydromancy"]},
+    24614: {"mainName": "Superior Sigil of Geomancy", "altNames": ["Geomancia", "Geomancy", "Sigil Geomancy"]},
+    24615: {"mainName": "Superior Sigil of Severance", "altNames": ["Severidad", "Severance", "Sigil Severance"]},
+    24616: {"mainName": "Superior Sigil of Celerity", "altNames": ["Celeridad", "Celerity", "Sigil Celerity"]},
+    24617: {"mainName": "Superior Sigil of Vision", "altNames": ["Vision", "Sigil Vision"]},
+    24618: {"mainName": "Superior Sigil of Stamina", "altNames": ["Resistencia", "Stamina", "Sigil Stamina"]},
+    24619: {"mainName": "Superior Sigil of Frailty", "altNames": ["Fragilidad", "Frailty", "Sigil Frailty"]},
+    24620: {"mainName": "Superior Sigil of Smoldering", "altNames": ["Humeante", "Smoldering", "Sigil Smoldering"]},
+    24621: {"mainName": "Superior Sigil of Chilling", "altNames": ["Helado", "Chilling", "Sigil Chilling"]},
+    24622: {"mainName": "Superior Sigil of Venom", "altNames": ["Veneno", "Venom", "Sigil Venom"]},
+    24623: {"mainName": "Superior Sigil of Debility", "altNames": ["Debilidad", "Debility", "Sigil Debility"]},
+    24624: {"mainName": "Superior Sigil of Blight", "altNames": ["Plaga", "Blight", "Sigil Blight"]},
+    24625: {"mainName": "Superior Sigil of Perplexity", "altNames": ["Perplejidad", "Perplexity", "Sigil Perplexity"]},
+    24626: {"mainName": "Superior Sigil of Corruption", "altNames": ["Corrupcion", "Corruption", "Sigil Corruption"]},
+    24627: {"mainName": "Superior Sigil of Battle", "altNames": ["Batalla", "Battle", "Sigil Battle"]},
+    24628: {"mainName": "Superior Sigil of Bloodlust", "altNames": ["Sed", "Bloodlust", "Sigil Bloodlust"]},
+    24629: {"mainName": "Superior Sigil of Blood", "altNames": ["Sangre", "Blood", "Sigil Blood"]},
+    24630: {"mainName": "Superior Sigil of Life", "altNames": ["Vida", "Life", "Sigil Life"]},
+    24631: {"mainName": "Superior Sigil of Leeching", "altNames": ["Sangrado", "Leeching", "Sigil Leeching"]},
+    24632: {"mainName": "Superior Sigil of Restoration", "altNames": ["Restauracion", "Restoration", "Sigil Restoration"]},
+    24633: {"mainName": "Superior Sigil of Cleansing", "altNames": ["Limpieza", "Cleansing", "Sigil Cleansing"]},
+    24634: {"mainName": "Superior Sigil of Severance", "altNames": ["Severidad", "Severance", "Sigil Severance"]},
+    24635: {"mainName": "Superior Sigil of Celerity", "altNames": ["Celeridad", "Celerity", "Sigil Celerity"]},
+    24636: {"mainName": "Superior Sigil of Vision", "altNames": ["Vision", "Sigil Vision"]},
+    24637: {"mainName": "Superior Sigil of Stamina", "altNames": ["Resistencia", "Stamina", "Sigil Stamina"]},
+    24638: {"mainName": "Superior Sigil of Frailty", "altNames": ["Fragilidad", "Frailty", "Sigil Frailty"]},
+    
+    # Superior Runes - Common and Meta
+    24800: {"mainName": "Superior Rune of Elementalist", "altNames": ["Elementalista", "Elementalist", "Rune Elementalist"]},
+    24818: {"mainName": "Superior Rune of Thief", "altNames": ["Ladrón", "ladron", "thief", "Rune Thief"]},
+    24830: {"mainName": "Superior Rune of Adventurer", "altNames": ["Aventurero", "Adventurer", "Rune Adventurer"]},
+    44956: {"mainName": "Superior Rune of Torment", "altNames": ["Runa Tormento", "STorment", "Rune Torment"]},
+    24720: {"mainName": "Superior Rune of Speed", "altNames": ["Velocidad", "Speed", "Rune Speed"]},
+    24836: {"mainName": "Superior Rune of Scholar", "altNames": ["Erudito", "Schoolar", "Scholar", "Rune Scholar"]},
+    24833: {"mainName": "Superior Rune of Brawler", "altNames": ["Pendenciero", "Brawler", "Rune Brawler"]},
+    89999: {"mainName": "Superior Rune of Fireworks", "altNames": ["Fuego", "Fireworks", "Rune Fireworks"]},
+    24762: {"mainName": "Superior Rune of Krait", "altNames": ["Krait", "Rune Krait"]},
+    24839: {"mainName": "Superior Rune of Water", "altNames": ["Agua", "water", "Rune Water"]},
+    74978: {"mainName": "Superior Rune of the Dragonhunter", "altNames": ["Dragon", "Dragonhunter", "Rune Dragonhunter"]},
+    24723: {"mainName": "Superior Rune of the Ranger", "altNames": ["Guardabosques", "Ranger", "Rune Ranger"]},
+    24724: {"mainName": "Superior Rune of the Warrior", "altNames": ["Guerrero", "Warrior", "Rune Warrior"]},
+    24725: {"mainName": "Superior Rune of the Guardian", "altNames": ["Guardian", "Rune Guardian"]},
+    24726: {"mainName": "Superior Rune of the Mesmer", "altNames": ["Hipnotizador", "Mesmer", "Rune Mesmer"]},
+    24727: {"mainName": "Superior Rune of the Necromancer", "altNames": ["Nigromante", "Necromancer", "Rune Necromancer"]},
+    24728: {"mainName": "Superior Rune of the Engineer", "altNames": ["Ingeniero", "Engineer", "Rune Engineer"]},
+    24729: {"mainName": "Superior Rune of Strength", "altNames": ["Fuerza", "Strength", "Rune Strength"]},
+    24730: {"mainName": "Superior Rune of Divinity", "altNames": ["Divinidad", "Divinity", "Rune Divinity"]},
+    24731: {"mainName": "Superior Rune of Hoelbrak", "altNames": ["Hoelbrak", "Rune Hoelbrak"]},
+    24732: {"mainName": "Superior Rune of the Grove", "altNames": ["Arboleda", "Grove", "Rune Grove"]},
+    24733: {"mainName": "Superior Rune of the Citadel", "altNames": ["Ciudadela", "Citadel", "Rune Citadel"]},
+    24734: {"mainName": "Superior Rune of the Traveler", "altNames": ["Viajero", "Traveler", "Rune Traveler"]},
+    24735: {"mainName": "Superior Rune of the Monk", "altNames": ["Monje", "Monk", "Rune Monk"]},
+    24736: {"mainName": "Superior Rune of the Trooper", "altNames": ["Soldado", "Trooper", "Rune Trooper"]},
+    24737: {"mainName": "Superior Rune of the Privateer", "altNames": ["Corsario", "Privateer", "Rune Privateer"]},
+    24738: {"mainName": "Superior Rune of the Afflicted", "altNames": ["Afligido", "Afflicted", "Rune Afflicted"]},
+    24739: {"mainName": "Superior Rune of the Nightmare", "altNames": ["Pesadilla", "Nightmare", "Rune Nightmare"]},
+    24740: {"mainName": "Superior Rune of the Undead", "altNames": ["No muerto", "Undead", "Rune Undead"]},
+    24741: {"mainName": "Superior Rune of the Golemancer", "altNames": ["Golemancer", "Rune Golemancer"]},
+    24742: {"mainName": "Superior Rune of the Mad King", "altNames": ["Rey Loco", "Mad King", "Rune Mad King"]},
+    24743: {"mainName": "Superior Rune of the Centaur", "altNames": ["Centauro", "Centaur", "Rune Centaur"]},
+    24744: {"mainName": "Superior Rune of the Ogre", "altNames": ["Ogro", "Ogre", "Rune Ogre"]},
+    24745: {"mainName": "Superior Rune of the Dolyak", "altNames": ["Dolyak", "Rune Dolyak"]},
+    24746: {"mainName": "Superior Rune of the Wurm", "altNames": ["Gusano", "Wurm", "Rune Wurm"]},
+    24747: {"mainName": "Superior Rune of the Lich", "altNames": ["Lich", "Rune Lich"]},
+    24748: {"mainName": "Superior Rune of the Pack", "altNames": ["Manada", "Pack", "Rune Pack"]},
+    24749: {"mainName": "Superior Rune of the Eagle", "altNames": ["Aguila", "Eagle", "Rune Eagle"]},
+    24750: {"mainName": "Superior Rune of the Flock", "altNames": ["Bandada", "Flock", "Rune Flock"]},
+    24751: {"mainName": "Superior Rune of the Sunless", "altNames": ["Sin sol", "Sunless", "Rune Sunless"]},
+    24752: {"mainName": "Superior Rune of the Zephyrite", "altNames": ["Zefirita", "Zephyrite", "Rune Zephyrite"]},
+    24753: {"mainName": "Superior Rune of the Scavenger", "altNames": ["Carroñero", "Scavenger", "Rune Scavenger"]},
+    24754: {"mainName": "Superior Rune of the Aristocracy", "altNames": ["Aristocracia", "Aristocracy", "Rune Aristocracy"]},
+    24755: {"mainName": "Superior Rune of the Baelfire", "altNames": ["Baelfire", "Rune Baelfire"]},
+    24756: {"mainName": "Superior Rune of the Ice", "altNames": ["Hielo", "Ice", "Rune Ice"]},
+    24757: {"mainName": "Superior Rune of the Fire", "altNames": ["Fuego", "Fire", "Rune Fire"]},
+    24758: {"mainName": "Superior Rune of the Earth", "altNames": ["Tierra", "Earth", "Rune Earth"]},
+    24759: {"mainName": "Superior Rune of the Air", "altNames": ["Aire", "Air", "Rune Air"]},
+    24760: {"mainName": "Superior Rune of the Stars", "altNames": ["Estrellas", "Stars", "Rune Stars"]},
+    24761: {"mainName": "Superior Rune of the Forge", "altNames": ["Forja", "Forge", "Rune Forge"]},
+    24763: {"mainName": "Superior Rune of the Revenant", "altNames": ["Revenant", "Rune Revenant"]},
+    24764: {"mainName": "Superior Rune of the Berserker", "altNames": ["Berserker", "Rune Berserker"]},
+    24765: {"mainName": "Superior Rune of the Daredevil", "altNames": ["Temerario", "Daredevil", "Rune Daredevil"]},
+    24766: {"mainName": "Superior Rune of the Scourge", "altNames": ["Azote", "Scourge", "Rune Scourge"]},
+    24767: {"mainName": "Superior Rune of the Spellbreaker", "altNames": ["Rompehechizos", "Spellbreaker", "Rune Spellbreaker"]},
+    24768: {"mainName": "Superior Rune of the Weaver", "altNames": ["Tejedor", "Weaver", "Rune Weaver"]},
+    24769: {"mainName": "Superior Rune of the Holosmith", "altNames": ["Holosmith", "Rune Holosmith"]},
+    24770: {"mainName": "Superior Rune of the Deadeye", "altNames": ["Ojo Muerto", "Deadeye", "Rune Deadeye"]},
+    24771: {"mainName": "Superior Rune of the Mirage", "altNames": ["Espejismo", "Mirage", "Rune Mirage"]},
+    24772: {"mainName": "Superior Rune of the Firebrand", "altNames": ["Portador de Fuego", "Firebrand", "Rune Firebrand"]},
+    24773: {"mainName": "Superior Rune of the Renegade", "altNames": ["Renegado", "Renegade", "Rune Renegade"]},
+    24774: {"mainName": "Superior Rune of the Chronomancer", "altNames": ["Cronomante", "Chronomancer", "Rune Chronomancer"]},
+    24775: {"mainName": "Superior Rune of the Druid", "altNames": ["Druida", "Druid", "Rune Druid"]},
+    24776: {"mainName": "Superior Rune of the Soulbeast", "altNames": ["Alma Bestia", "Soulbeast", "Rune Soulbeast"]},
+    24777: {"mainName": "Superior Rune of the Tempest", "altNames": ["Tempestad", "Tempest", "Rune Tempest"]},
+    24778: {"mainName": "Superior Rune of the Scrapper", "altNames": ["Chatarrero", "Scrapper", "Rune Scrapper"]},
+    24779: {"mainName": "Superior Rune of the Herald", "altNames": ["Heraldo", "Herald", "Rune Herald"]},
+    24780: {"mainName": "Superior Rune of the Reaper", "altNames": ["Segador", "Reaper", "Rune Reaper"]},
+    24781: {"mainName": "Superior Rune of Leadership", "altNames": ["Liderazgo", "Leadership", "Rune Leadership"]},
+    24782: {"mainName": "Superior Rune of Durability", "altNames": ["Durabilidad", "Durability", "Rune Durability"]},
+    24783: {"mainName": "Superior Rune of the Defender", "altNames": ["Defensor", "Defender", "Rune Defender"]},
+    24784: {"mainName": "Superior Rune of Mercy", "altNames": ["Misericordia", "Mercy", "Rune Mercy"]},
+    24785: {"mainName": "Superior Rune of Antitoxin", "altNames": ["Antitoxina", "Antitoxin", "Rune Antitoxin"]},
+    24786: {"mainName": "Superior Rune of Resistance", "altNames": ["Resistencia", "Resistance", "Rune Resistance"]},
+    24787: {"mainName": "Superior Rune of Evasion", "altNames": ["Evasión", "Evasion", "Rune Evasion"]},
+    24788: {"mainName": "Superior Rune of Vampirism", "altNames": ["Vampirismo", "Vampirism", "Rune Vampirism"]},
+    24789: {"mainName": "Superior Rune of Surging", "altNames": ["Surgente", "Surging", "Rune Surging"]},
+    24790: {"mainName": "Superior Rune of Altruism", "altNames": ["Altruismo", "Altruism", "Rune Altruism"]},
     
     # Agony Infusions
     49424: {"mainName": "+1 Agony Infusion", "altNames": ["+1"]},
@@ -349,26 +491,49 @@ class ItemPrice(commands.Cog):
             print(f'Error when getting the price of the Mystic Coins from the API: {error}')
             return None
 
-    async def search_item_by_name_api(self, session: aiohttp.ClientSession, name: str) -> Optional[int]:
-        """Busca un objeto por nombre usando la API de GW2"""
+    async def search_item_by_name_api(self, session: aiohttp.ClientSession, name: str) -> Optional[Tuple[int, List[int]]]:
+        """Busca un objeto por nombre usando la API de GW2. Retorna (item_id, lista_sugerencias)"""
         try:
             # Buscar por nombre en la API
             search_url = f"https://api.guildwars2.com/v2/search?q={urllib.parse.quote(name)}&type=item"
-            async with session.get(search_url, timeout=aiohttp.ClientTimeout(total=5)) as response:
+            async with session.get(search_url, timeout=aiohttp.ClientTimeout(total=10)) as response:
                 if response.status != 200:
-                    return None
+                    return None, []
                 
                 search_results = await response.json()
                 if not search_results or not search_results.get('items'):
-                    return None
+                    return None, []
                 
-                # Tomar el primer resultado (el más relevante)
-                item_id = search_results['items'][0]
-                return item_id
+                item_ids = search_results['items'][:10]  # Obtener hasta 10 resultados
+                
+                # Obtener detalles de los items para hacer matching más preciso
+                if not item_ids:
+                    return None, []
+                
+                # Obtener detalles en inglés y español para matching más preciso
+                ids_param = ",".join(map(str, item_ids))
+                name_lower = name.lower().strip()
+                
+                # Buscar en inglés
+                async with session.get(f"https://api.guildwars2.com/v2/items?ids={ids_param}&lang=en", timeout=aiohttp.ClientTimeout(total=10)) as items_response:
+                    if items_response.status == 200:
+                        items = await items_response.json()
+                        # Buscar match exacto primero
+                        for item in items:
+                            if item['name'].lower() == name_lower:
+                                return item['id'], item_ids[:5]
+                        
+                        # Buscar match parcial
+                        for item in items:
+                            if name_lower in item['name'].lower() or item['name'].lower() in name_lower:
+                                return item['id'], item_ids[:5]
+                
+                # Si no hay match, retornar el primero con sugerencias
+                return item_ids[0], item_ids[:5]
                 
         except Exception as e:
             print(f'Error buscando objeto por nombre en la API: {e}')
-            return None
+            return None, []
 
     def calcular_monedas(self, precio: int) -> str:
         if precio is None:
@@ -419,14 +584,33 @@ class ItemPrice(commands.Cog):
                     for id_, item in ITEMS_MAP.items():
                         if name_lower in item["mainName"].lower() or any(name_lower in alt.lower() for alt in item["altNames"]):
                             similares.append(item["mainName"])
-                if not objeto_id and not similares:
+                
+                # Si no se encontró en el mapa, buscar en la API
+                if not objeto_id:
                     timeout = aiohttp.ClientTimeout(total=10)
                     async with aiohttp.ClientSession(timeout=timeout) as session:
-                        objeto_id = await self.search_item_by_name_api(session, query)
-                        if not objeto_id:
+                        api_result = await self.search_item_by_name_api(session, query)
+                        if api_result and api_result[0]:
+                            objeto_id = api_result[0]
+                            # Si hay sugerencias de la API, agregarlas a similares
+                            if api_result[1] and len(api_result[1]) > 1:
+                                # Obtener nombres de los items sugeridos
+                                try:
+                                    ids_param = ",".join(map(str, api_result[1][:5]))
+                                    async with session.get(f"https://api.guildwars2.com/v2/items?ids={ids_param}&lang=en", timeout=aiohttp.ClientTimeout(total=5)) as items_response:
+                                        if items_response.status == 200:
+                                            items = await items_response.json()
+                                            for item in items:
+                                                if item['id'] != objeto_id:
+                                                    similares.append(item['name'])
+                                except:
+                                    pass
+                        elif not similares:
                             await interaction.followup.send('Item with that name was not found. Try a more specific name or use the item ID.')
                             return
-                elif not objeto_id and similares:
+                
+                # Si hay sugerencias pero no match exacto, mostrar sugerencias
+                if not objeto_id and similares:
                     sugerencias = '\n'.join(f'- {nombre}' for nombre in similares[:5])
                     await interaction.followup.send(f'Item not found. Did you mean?:\n{sugerencias}')
                     return

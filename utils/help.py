@@ -1,5 +1,6 @@
 import discord
 from discord.ext import commands
+from discord import app_commands
 
 # Diccionario simple de traducciones
 TRANSLATIONS = {
@@ -66,18 +67,49 @@ class CustomHelpCommand(commands.Cog):
                 command_names = ", ".join([f"`{cmd.name}`" for cmd in commands_list])
                 embed.add_field(name=f"**{cog_name} (Comandos de Texto)**", value=command_names, inline=False)
 
-        # Listar comandos de aplicación por cog (esto puede necesitar ajustes)
-        app_commands_by_cog = {}
+        # Comandos que NO deben aparecer en la categoría Gw2
+        non_gw2_commands = {
+            'embed-edit', 'embed-custom', 'embed-ayuda',
+            'mensaje-crear', 'mensaje-edit', 'mensaje-lista',
+            'role', 'role_migrar'
+        }
+        
+        # Separar comandos de aplicación en dos grupos
+        gw2_commands = []
+        admin_commands = []
+        
         for cmd in self.bot.tree.get_commands():
-            cog_name = cmd.module.split('.')[-1] if cmd.module else "Global Commands" # Inferir nombre del cog
-            if cog_name not in categories_to_ignore:
-                if cog_name not in app_commands_by_cog:
-                    app_commands_by_cog[cog_name] = []
-                app_commands_by_cog[cog_name].append(f"`/{cmd.name}`")
-
-        if app_commands_by_cog:
-            embed.add_field(name="**Gw2**", value=", ".join(sorted(cmd for sublist in app_commands_by_cog.values() for cmd in sublist)), inline=False)
-            # No necesitas el bucle interno para agregar campos individuales por cog aquí si quieres una lista plana
+            # Manejar grupos de comandos (como apikey, t6)
+            if isinstance(cmd, app_commands.Group):
+                # Es un grupo, agregar sus subcomandos
+                for subcmd in cmd.commands.values():
+                    full_name = f"/{cmd.name} {subcmd.name}"
+                    if cmd.name in non_gw2_commands or subcmd.name in non_gw2_commands:
+                        admin_commands.append(f"`{full_name}`")
+                    else:
+                        gw2_commands.append(f"`{full_name}`")
+            else:
+                # Es un comando individual
+                if cmd.name in non_gw2_commands:
+                    admin_commands.append(f"`/{cmd.name}`")
+                else:
+                    gw2_commands.append(f"`/{cmd.name}`")
+        
+        # Mostrar comandos de administración/configuración
+        if admin_commands:
+            embed.add_field(
+                name="**Administración**", 
+                value=", ".join(sorted(admin_commands)), 
+                inline=False
+            )
+        
+        # Mostrar comandos de GW2
+        if gw2_commands:
+            embed.add_field(
+                name="**Gw2**", 
+                value=", ".join(sorted(gw2_commands)), 
+                inline=False
+            )
 
         await ctx.send(embed=embed)
 

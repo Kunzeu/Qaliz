@@ -47,14 +47,24 @@ class CustomHelpCommand(commands.Cog):
                 embed.description = command.help or ("No hay descripción disponible para este comando." if lang == 'es' else "No description available for this command.")
                 await ctx.send(embed=embed)
                 return
-            else:
-                for app_command in self.bot.tree.get_commands():
-                    if app_command.name == command_name:
-                        embed.title = f"Comando de Aplicación: /{app_command.name}" if lang == 'es' else f"Application Command: /{app_command.name}"
-                        embed.description = app_command.description or ("No hay descripción disponible." if lang == 'es' else "No description available.")
-                        await ctx.send(embed=embed)
-                        return
-                await ctx.send(TRANSLATIONS[lang]['not_found'].format(name=command_name))
+            
+            # Buscar en comandos de aplicación
+            for app_command in self.bot.tree.get_commands():
+                if app_command.name == command_name:
+                    embed.title = f"Comando de Aplicación: /{app_command.name}" if lang == 'es' else f"Application Command: /{app_command.name}"
+                    embed.description = app_command.description or ("No hay descripción disponible." if lang == 'es' else "No description available.")
+                    await ctx.send(embed=embed)
+                    return
+                # Buscar en subcomandos de grupos
+                if isinstance(app_command, app_commands.Group):
+                    for subcmd in app_command.walk_commands():
+                        if subcmd.name == command_name:
+                            embed.title = f"Comando de Aplicación: /{app_command.name} {subcmd.name}" if lang == 'es' else f"Application Command: /{app_command.name} {subcmd.name}"
+                            embed.description = subcmd.description or ("No hay descripción disponible." if lang == 'es' else "No description available.")
+                            await ctx.send(embed=embed)
+                            return
+            
+            await ctx.send(TRANSLATIONS[lang]['not_found'].format(name=command_name))
             return
 
         categories_to_ignore = ['No Category', 'CustomHelpCommand', 'SyncCog', 'TimeoutCog', 'ElvisTimeoutCog', 'Reception']
@@ -82,12 +92,29 @@ class CustomHelpCommand(commands.Cog):
             # Manejar grupos de comandos (como apikey, t6)
             if isinstance(cmd, app_commands.Group):
                 # Es un grupo, agregar sus subcomandos
-                for subcmd in cmd.commands.values():
-                    full_name = f"/{cmd.name} {subcmd.name}"
-                    if cmd.name in non_gw2_commands or subcmd.name in non_gw2_commands:
-                        admin_commands.append(f"`{full_name}`")
-                    else:
-                        gw2_commands.append(f"`{full_name}`")
+                try:
+                    # Usar walk_commands() para obtener todos los subcomandos recursivamente
+                    # Filtrar para evitar incluir el grupo mismo
+                    for subcmd in cmd.walk_commands():
+                        # Solo agregar si no es el grupo mismo (los subcomandos tienen parent)
+                        if subcmd.parent is not None:
+                            full_name = f"/{cmd.name} {subcmd.name}"
+                            if cmd.name in non_gw2_commands or subcmd.name in non_gw2_commands:
+                                admin_commands.append(f"`{full_name}`")
+                            else:
+                                gw2_commands.append(f"`{full_name}`")
+                except Exception as e:
+                    # Si hay un error al acceder a los subcomandos, intentar método alternativo
+                    try:
+                        if hasattr(cmd, 'commands'):
+                            for subcmd_name, subcmd in cmd.commands.items():
+                                full_name = f"/{cmd.name} {subcmd_name}"
+                                if cmd.name in non_gw2_commands or subcmd_name in non_gw2_commands:
+                                    admin_commands.append(f"`{full_name}`")
+                                else:
+                                    gw2_commands.append(f"`{full_name}`")
+                    except Exception:
+                        pass
             else:
                 # Es un comando individual
                 if cmd.name in non_gw2_commands:

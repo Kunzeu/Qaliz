@@ -171,7 +171,7 @@ ITEMS_MAP = {
     24607: {"mainName": "Superior Sigil of Energy", "altNames": ["Energia", "Energy", "Sigil Energy"]},
     24615: {"mainName": "Superior Sigil of Force", "altNames": ["Fuerza", "Force", "Sigil Force"]},
     24618: {"mainName": "Superior Sigil of Accuracy", "altNames": ["Precisión", "Accuracy", "Sigil Accuracy"]},
-    24624: {"mainName": "Superior Sigil of Smoldering", "altNames": ["ardor", "Smoldering", "Sigil Smoldering"]},,
+    24624: {"mainName": "Superior Sigil of Smoldering", "altNames": ["ardor", "Smoldering", "Sigil Smoldering"]},
     
     # Superior Runes - Common and Meta
     24800: {"mainName": "Superior Rune of Elementalist", "altNames": ["Elementalista", "Elementalist", "Rune Elementalist"]},
@@ -274,7 +274,7 @@ ITEMS_MAP = {
     104501: {"mainName": "Relic of Fire", "altNames": ["RFire", "Fire"]},
     100752: {"mainName": "Relic of the Pack", "altNames": ["RPack", "Pack"]},
     100403: {"mainName": "Relic of the Golemancer", "altNames": ["Golemancer"]},
-    100435: {"mainName": "Relic of the Earth"},
+    100435: {"mainName": "Relic of the Earth", "altNames": []},
     
     # Event Items
     35986: {"mainName": "Permanent Trading Post Express Contract", "altNames": ["Bazar"]},
@@ -339,14 +339,6 @@ class ItemPrice(commands.Cog):
         self.bot = bot
         self.items_loaded = False
         
-    async def cog_load(self):
-        # Registro el autocompletado correctamente como método de instancia
-        self.item.autocomplete('query')(self.item_autocomplete)
-        # Optional: Load items on startup
-        # global ITEMS_MAP
-        # ITEMS_MAP = await load_items_map()
-        # self.items_loaded = True
-        pass
 
     def get_rarity_color(self, rarity: str) -> int:
         return RARITY_COLORS.get(rarity, 0x000000)
@@ -462,6 +454,7 @@ class ItemPrice(commands.Cog):
         query="ID or name of the object to obtain the price and the image.",
         quantity="The quantity of the item to calculate the price for."
     )
+    @app_commands.autocomplete(query=item_autocomplete)
     async def item(self, interaction: discord.Interaction, query: str, quantity: int = 1):
         await interaction.response.defer(thinking=True)
         try:
@@ -470,12 +463,14 @@ class ItemPrice(commands.Cog):
             if not objeto_id:
                 name_lower = query.lower().strip()
                 for id_, item in ITEMS_MAP.items():
-                    if item["mainName"].lower() == name_lower or any(name_lower == alt.lower() for alt in item["altNames"]):
+                    alt_names = item.get("altNames", [])
+                    if item["mainName"].lower() == name_lower or any(name_lower == alt.lower() for alt in alt_names):
                         objeto_id = id_
                         break
                 if not objeto_id:
                     for id_, item in ITEMS_MAP.items():
-                        if name_lower in item["mainName"].lower() or any(name_lower in alt.lower() for alt in item["altNames"]):
+                        alt_names = item.get("altNames", [])
+                        if name_lower in item["mainName"].lower() or any(name_lower in alt.lower() for alt in alt_names):
                             similares.append(item["mainName"])
                 
                 # Si no se encontró en el mapa, buscar en la API
@@ -609,8 +604,9 @@ class ItemPrice(commands.Cog):
                     inline=False
                 )
                 # Mostrar equivalentes según el tipo de item
-                if rareza_objeto == "Legendary" or objeto_id == 83410:
-                    # Para Legendary y item 83410: mostrar ambos equivalentes
+                equivalentes_full = {83410, 46743, 75919}
+                if rareza_objeto == "Legendary" or objeto_id in equivalentes_full:
+                    # Para Legendary y estos ítems: mostrar ambos equivalentes
                     if precio_ecto:
                         ectos_requeridos = math.ceil(precio_descuento / (precio_ecto * 0.9))
                         num_stacks_ectos = ectos_requeridos // 250
@@ -658,7 +654,7 @@ class ItemPrice(commands.Cog):
                     inline=False
                 )
                 # Agregar mensaje sobre el cálculo al 90%
-                if (rareza_objeto == "Legendary" or objeto_id == 83410 or objeto_id == 19721 or objeto_id == 19976):
+                if (rareza_objeto == "Legendary" or objeto_id in equivalentes_full or objeto_id == 19721 or objeto_id == 19976):
                     embed.add_field(
                         name="ℹ️ Note",
                         value="Equivalents are calculated at 90% TP value",

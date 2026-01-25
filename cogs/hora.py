@@ -87,6 +87,7 @@ class Hora(commands.Cog):
         
         return int(target_datetime.timestamp())
 
+
     @commands.command(name="IO", aliases=["io"])
     async def miami_time(self, ctx):
         """Muestra los horarios de IO (Isla) con la hora del servidor UTC"""
@@ -114,7 +115,7 @@ class Hora(commands.Cog):
         # Hora del servidor con timestamp dinámico y hora UTC explícita
         embed.add_field(
             name="🕐 Hora del servidor (UTC): / Hora do servidor (UTC):",
-            value=f"**{fecha_hora_utc}**\n(<t:{timestamp}:F>)\n(<t:{timestamp}:t>)",
+            value=f"**{fecha_hora_utc}**\n(<t:{timestamp}:F>)",
             inline=False
         )
         
@@ -131,6 +132,49 @@ class Hora(commands.Cog):
         )
         
         await ctx.send(embed=embed)
+
+    @discord.app_commands.command(name="gbr", description="Muestra el horario de GBR")
+    async def gbr_slash(self, interaction: discord.Interaction):
+        """Muestra los horarios de GBR con la hora del servidor UTC (Slash)"""
+        now_utc = datetime.now(pytz.utc)
+        fecha_hora_utc = now_utc.strftime('%d/%m/%Y %H:%M:%S UTC')
+        timestamp = int(now_utc.timestamp())
+        gbr_timestamp = self.get_next_weekday_time(6, 17, 0)  # Domingo = 6, 17:00
+        
+        embed = self._create_gbr_embed(fecha_hora_utc, timestamp, gbr_timestamp)
+        await interaction.response.send_message(embed=embed)
+
+    @commands.command(name="GBR", aliases=["gbr"])
+    async def gbr_prefix(self, ctx):
+        """Muestra los horarios de GBR con la hora del servidor UTC (Prefijo)"""
+        now_utc = datetime.now(pytz.utc)
+        fecha_hora_utc = now_utc.strftime('%d/%m/%Y %H:%M:%S UTC')
+        timestamp = int(now_utc.timestamp())
+        gbr_timestamp = self.get_next_weekday_time(6, 17, 0)  # Domingo = 6, 17:00
+        
+        embed = self._create_gbr_embed(fecha_hora_utc, timestamp, gbr_timestamp)
+        await ctx.send(embed=embed)
+
+    def _create_gbr_embed(self, fecha_hora_utc, timestamp, gbr_timestamp):
+        embed = discord.Embed(
+            title="⚔️ Los horarios de GBR / Os horários de GBR",
+            color=discord.Color.gold()
+        )
+        
+        embed.add_field(
+            name="🕐 Hora del servidor (UTC): / Hora do servidor (UTC):",
+            value=f"**{fecha_hora_utc}**\n(<t:{timestamp}:F>)",
+            inline=False
+        )
+        
+        embed.add_field(
+            name="📅 Horario de GBR: / Horário de GBR:",
+            value=(
+                f"**Domingo / Domingo:** 17:00 UTC <t:{gbr_timestamp}:R> (<t:{gbr_timestamp}:F>)"
+            ),
+            inline=False
+        )
+        return embed
 
     
 # Función para agregar el Cog al bot

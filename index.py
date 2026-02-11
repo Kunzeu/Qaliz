@@ -18,8 +18,13 @@ def home():
     return "Bot is running!"
 
 def run_flask():
-    port = int(os.getenv("PORT", 8080))
-    app.run(host='0.0.0.0', port=port)
+    try:
+        # Usar un puerto alto menos común para evitar conflictos
+        port = int(os.getenv("PORT", 10000)) 
+        print(f"🌐 Intentando iniciar servidor web en puerto {port}...")
+        app.run(host='0.0.0.0', port=port, debug=False, use_reloader=False)
+    except Exception as e:
+        print(f"⚠️ Servidor web no pudo iniciarse (esto no afectará al bot): {e}")
 
 # Configuración de logging
 logging.basicConfig(level=logging.INFO)

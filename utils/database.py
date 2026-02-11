@@ -30,6 +30,7 @@ class DatabaseManager:
         self.db = firestore.client()
         self.apiKeys = self.db.collection('api_keys')
         self.reminders = self.db.collection('reminders')
+        self.blacklist = self.db.collection('blacklist')
 
     async def connect(self):
         try:
@@ -204,5 +205,34 @@ class DatabaseManager:
         except Exception as error:
             print(f"❌ Error obteniendo todos los recordatorios: {str(error)}")
             return []
+
+    async def addToBlacklist(self, userId, reason="No reason"):
+        try:
+            self.blacklist.document(str(userId)).set({
+                'reason': reason,
+                'timestamp': datetime.now()
+            })
+            print(f"✅ Usuario {userId} añadido a la blacklist")
+            return True
+        except Exception as error:
+            print(f"❌ Error añadiendo a blacklist: {str(error)}")
+            return False
+
+    async def removeFromBlacklist(self, userId):
+        try:
+            self.blacklist.document(str(userId)).delete()
+            print(f"✅ Usuario {userId} eliminado de la blacklist")
+            return True
+        except Exception as error:
+            print(f"❌ Error eliminando de blacklist: {str(error)}")
+            return False
+
+    async def isBlacklisted(self, userId):
+        try:
+            doc = self.blacklist.document(str(userId)).get()
+            return doc.exists
+        except Exception as error:
+            print(f"❌ Error comprobando blacklist: {str(error)}")
+            return False
 
 dbManager = DatabaseManager()

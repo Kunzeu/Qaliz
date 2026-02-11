@@ -64,17 +64,29 @@ class Blacklist(commands.Cog):
 
         # 1. Comprobar si el autor está en la lista negra
         if await self.bot.db.isBlacklisted(message.author.id):
-            # Opcional: Borrar mensajes de usuarios bloqueados también
-            # await message.delete()
             return
 
-        # 2. Comprobar si menciona a alguien en la lista negra
+        # 2. EXCEPCIÓN: Si es un comando para gestionar la lista negra, NO borrar
+        content = message.content.lower().strip()
+        # Verificar si empieza con algún prefijo del bot
+        prefixes = tuple(self.bot.command_prefix) if isinstance(self.bot.command_prefix, list) else (self.bot.command_prefix,)
+        
+        if content.startswith(prefixes):
+            # Limpiar el prefijo para analizar el comando
+            for p in prefixes:
+                if content.startswith(p):
+                    clean_content = content[len(p):].strip()
+                    break
+            
+            # Si el comando empieza con "blacklist", permitimos la mención para gestionarlo
+            if clean_content.startswith("blacklist") or clean_content.startswith("bl"):
+                return
+
+        # 3. Comprobar si menciona a alguien en la lista negra (para otros casos)
         for user in message.mentions:
             if await self.bot.db.isBlacklisted(user.id):
                 try:
                     await message.delete()
-                    # Opcional: Enviar un mensaje efímero o log si se desea, 
-                    # pero el usuario pidió silencio.
                     return
                 except discord.Forbidden:
                     self.logger.error(f"Error: No tengo permisos para borrar mensajes en {message.channel.name}")
@@ -82,11 +94,15 @@ class Blacklist(commands.Cog):
                     self.logger.error(f"Error borrando mensaje: {e}")
 
     async def bot_check(self, ctx):
-        # 1. El autor no puede estar bloqueado
+        # 1. Si es el comando de blacklist, permitimos todo (para poder gestionar)
+        if ctx.command and (ctx.command.name == 'blacklist' or ctx.command.parent and ctx.command.parent.name == 'blacklist'):
+            return True
+
+        # 2. El autor no puede estar bloqueado
         if await self.bot.db.isBlacklisted(ctx.author.id):
             return False
 
-        # 2. Comprobar si algún usuario mencionado en el comando está bloqueado
+        # 3. Comprobar si algún usuario mencionado en el comando está bloqueado
         # (Para evitar "interactuar con él a través del bot")
         for user in ctx.message.mentions:
             if await self.bot.db.isBlacklisted(user.id):

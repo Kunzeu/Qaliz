@@ -43,7 +43,7 @@ class CustomBot(commands.Bot):
             intents=intents,
             activity=discord.Game(name="Guild Wars 2"),
             status=discord.Status.idle,
-            owner_id=552563672162107431
+            owner_ids={552563672162107431, 313384882606833676}
         )
         self.db = DatabaseManager()
         self.sync_commands = os.getenv("SYNC_COMMANDS", "false").lower() == "true"

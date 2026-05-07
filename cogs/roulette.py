@@ -3,6 +3,25 @@ from discord.ext import commands
 import random
 import asyncio
 
+# Lista configurable de roles permitidos: introducir IDs (int) o nombres (str)
+# Ejemplo: ALLOWED_ROLES = [123456789012345678, "Moderador"]
+ALLOWED_ROLES = ["Game Master", "Game Sage L", "Game Sage F"]
+
+
+def has_roles_allowed():
+    async def predicate(ctx):
+        # Permitir al owner del bot o administradores siempre
+        if getattr(ctx.bot, "owner_id", None) == ctx.author.id or ctx.author.guild_permissions.administrator:
+            return True
+
+        # Comprobar roles del usuario: admitir IDs (int) o nombres (str)
+        for r in ctx.author.roles:
+            if r.id in ALLOWED_ROLES or r.name in ALLOWED_ROLES:
+                return True
+        return False
+
+    return commands.check(predicate)
+
 class Roulette(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
@@ -14,7 +33,7 @@ class Roulette(commands.Cog):
         return commands.check(predicate)
 
     @commands.command(name='abrir_ruleta', aliases=['aruleta', 'open_roulette'])
-    @commands.has_permissions(administrator=True)
+    @has_roles_allowed()
     async def open_roulette(self, ctx):
         """Abre una nueva ruleta en este canal."""
         channel_id = ctx.channel.id
@@ -43,7 +62,7 @@ class Roulette(commands.Cog):
         }
 
     @commands.command(name='girar_ruleta', aliases=['gruleta', 'spin_roulette'])
-    @commands.has_permissions(administrator=True)
+    @has_roles_allowed()
     async def spin_roulette(self, ctx):
         """Gira la ruleta y elige un ganador."""
         channel_id = ctx.channel.id
@@ -123,7 +142,7 @@ class Roulette(commands.Cog):
             await ctx.send(f"Participantes actuales (**{len(mentions)}**):\n" + ", ".join(mentions))
 
     @commands.command(name='cancelar_ruleta', aliases=['cruleta'])
-    @commands.has_permissions(administrator=True)
+    @has_roles_allowed()
     async def cancel_roulette(self, ctx):
         """Cancela la ruleta actual."""
         channel_id = ctx.channel.id

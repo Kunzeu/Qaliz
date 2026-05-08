@@ -25,12 +25,30 @@ def has_roles_allowed():
 class Roulette(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.active_roulettes = {}  # {channel_id: {"participants": set(), "creator": user_id, "active": bool, "msg_id": int}}
+        self.active_roulettes = {}  # {channel_id: {"participants": set(), "creator": user_id, "active": bool, "msg_id": int, "guild_id": int}}
 
     def is_admin_or_owner():
         async def predicate(ctx):
             return ctx.author.id == ctx.bot.owner_id or ctx.author.guild_permissions.administrator
         return commands.check(predicate)
+
+    async def cog_load(self):
+        """Restaura las ruletas activas desde Firebase al iniciar el bot."""
+        try:
+            stored = await self.bot.db.getActiveRoulettes()
+            for r in stored:
+                channel_id = int(r['channel_id'])
+                self.active_roulettes[channel_id] = {
+                    "participants": set(int(uid) for uid in r.get('participants', [])),
+                    "creator": int(r.get('creator_id', 0)),
+                    "active": bool(r.get('active', True)),
+                    "msg_id": int(r.get('msg_id', 0)),
+                    "guild_id": int(r.get('guild_id', 0)),
+                }
+            if stored:
+                print(f"✅ Ruletas restauradas: {len(stored)}")
+        except Exception as e:
+            print(f"⚠️ No se pudieron restaurar las ruletas: {e}")
 
     @commands.command(name='abrir_ruleta', aliases=['aruleta', 'open_roulette'])
     @has_roles_allowed()
@@ -58,8 +76,17 @@ class Roulette(commands.Cog):
             "participants": set(),
             "creator": ctx.author.id,
             "active": True,
-            "msg_id": msg.id
+            "msg_id": msg.id,
+            "guild_id": ctx.guild.id if ctx.guild else 0,
         }
+
+        await self.bot.db.saveRoulette(channel_id, {
+            "guild_id": ctx.guild.id if ctx.guild else 0,
+            "creator_id": ctx.author.id,
+            "msg_id": msg.id,
+            "active": True,
+            "participants": [],
+        })
 
     @commands.command(name='girar_ruleta', aliases=['gruleta', 'spin_roulette'])
     @has_roles_allowed()
@@ -118,8 +145,9 @@ class Roulette(commands.Cog):
         
         await msg.edit(embed=win_embed)
         
-        # Limpiar la ruleta
+        # Limpiar la ruleta (memoria + Firebase)
         del self.active_roulettes[channel_id]
+        await self.bot.db.deleteRoulette(channel_id)
 
     @commands.command(name='participantes', aliases=['lista_ruleta'])
     async def list_participants(self, ctx):
@@ -148,6 +176,7 @@ class Roulette(commands.Cog):
         channel_id = ctx.channel.id
         if channel_id in self.active_roulettes:
             del self.active_roulettes[channel_id]
+            await self.bot.db.deleteRoulette(channel_id)
             await ctx.send("🛑 La ruleta ha sido cancelada.")
         else:
             await ctx.send("❌ No hay una ruleta activa para cancelar.")
@@ -166,10 +195,14 @@ class Roulette(commands.Cog):
             user_id = message.author.id
             if user_id not in self.active_roulettes[channel_id]['participants']:
                 self.active_roulettes[channel_id]['participants'].add(user_id)
+
+                try:
+                    await self.bot.db.addRouletteParticipant(channel_id, user_id)
+                except Exception as e:
+                    print(f"⚠️ No se pudo persistir participante {user_id}: {e}")
+
                 try:
                     await message.add_reaction("✅")
-                    # Opcional: Actualizar el embed original con el conteo
-                    # Pero requiere guardar el mensaje del embed (msg_id ya lo tenemos)
                 except discord.Forbidden:
                     pass
                 except Exception as e:

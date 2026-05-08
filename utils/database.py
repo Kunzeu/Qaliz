@@ -31,6 +31,7 @@ class DatabaseManager:
         self.apiKeys = self.db.collection('api_keys')
         self.reminders = self.db.collection('reminders')
         self.blacklist = self.db.collection('blacklist')
+        self.roulettes = self.db.collection('roulettes')
 
     async def connect(self):
         try:
@@ -234,5 +235,57 @@ class DatabaseManager:
         except Exception as error:
             print(f"❌ Error comprobando blacklist: {str(error)}")
             return False
+
+    async def saveRoulette(self, channel_id, data):
+        """Crea o actualiza una ruleta. `data` debe incluir creator_id, msg_id, guild_id, active, participants (list)."""
+        try:
+            payload = {
+                'channel_id': int(channel_id),
+                'guild_id': int(data.get('guild_id', 0)),
+                'creator_id': int(data.get('creator_id', 0)),
+                'msg_id': int(data.get('msg_id', 0)),
+                'active': bool(data.get('active', True)),
+                'participants': [int(uid) for uid in data.get('participants', [])],
+                'updated_at': datetime.now(),
+            }
+            self.roulettes.document(str(channel_id)).set(payload, merge=True)
+            return True
+        except Exception as error:
+            print(f"❌ Error guardando ruleta {channel_id}: {str(error)}")
+            return False
+
+    async def addRouletteParticipant(self, channel_id, user_id):
+        """Añade un participante a la ruleta usando ArrayUnion (atómico, evita duplicados)."""
+        try:
+            self.roulettes.document(str(channel_id)).update({
+                'participants': firestore.ArrayUnion([int(user_id)]),
+                'updated_at': datetime.now(),
+            })
+            return True
+        except Exception as error:
+            print(f"❌ Error añadiendo participante {user_id} a ruleta {channel_id}: {str(error)}")
+            return False
+
+    async def deleteRoulette(self, channel_id):
+        try:
+            self.roulettes.document(str(channel_id)).delete()
+            return True
+        except Exception as error:
+            print(f"❌ Error eliminando ruleta {channel_id}: {str(error)}")
+            return False
+
+    async def getActiveRoulettes(self):
+        """Devuelve todas las ruletas activas (lista de dicts)."""
+        try:
+            results = []
+            docs = self.roulettes.where('active', '==', True).stream()
+            for doc in docs:
+                data = doc.to_dict() or {}
+                data['channel_id'] = int(doc.id)
+                results.append(data)
+            return results
+        except Exception as error:
+            print(f"❌ Error obteniendo ruletas activas: {str(error)}")
+            return []
 
 dbManager = DatabaseManager()

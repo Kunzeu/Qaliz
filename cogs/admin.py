@@ -1,7 +1,7 @@
 import discord
 from discord.ext import commands
 import logging
-from datetime import timedelta
+from datetime import timedelta, datetime, timezone
 
 class Administration(commands.Cog):
     def __init__(self, bot):
@@ -132,6 +132,87 @@ class Administration(commands.Cog):
             await ctx.send(embed=embed)
         except Exception as e:
             await ctx.send(f"⚠️ Error: {e}")
+
+    @commands.command(aliases=['purge', 'prune'])
+    @commands.has_permissions(manage_messages=True)
+    @commands.bot_has_permissions(manage_messages=True)
+    @commands.guild_only()
+    async def clear(self, ctx, amount: int, member: discord.Member = None):
+        """
+        Delete the last <amount> messages in the channel.
+        Optionally filter by member: .clear 50 @user
+        Max: 1000 messages per call. Messages older than 14 days are deleted individually.
+        """
+        if amount < 1:
+            await ctx.send("⚠️ Amount must be at least 1.", delete_after=5)
+            return
+        if amount > 1000:
+            await ctx.send("⚠️ Amount must be 1000 or less.", delete_after=5)
+            return
+
+        try:
+            await ctx.message.delete()
+        except (discord.Forbidden, discord.NotFound):
+            pass
+
+        cutoff = datetime.now(timezone.utc) - timedelta(days=14)
+
+        def check(msg: discord.Message) -> bool:
+            if member is not None and msg.author.id != member.id:
+                return False
+            return True
+
+        try:
+            recent = [m async for m in ctx.channel.history(limit=amount * 2 if member else amount) if check(m)]
+            recent = recent[:amount]
+
+            bulk_targets = [m for m in recent if m.created_at > cutoff]
+            old_targets = [m for m in recent if m.created_at <= cutoff]
+
+            deleted_count = 0
+
+            if bulk_targets:
+                bulk_ids = {msg.id for msg in bulk_targets}
+                deleted = await ctx.channel.purge(
+                    limit=len(bulk_targets),
+                    check=lambda m: m.id in bulk_ids,
+                    bulk=True,
+                )
+                deleted_count += len(deleted)
+
+            for old_msg in old_targets:
+                try:
+                    await old_msg.delete()
+                    deleted_count += 1
+                except (discord.Forbidden, discord.NotFound):
+                    continue
+
+            embed = discord.Embed(color=0x00FF00)
+            embed.set_author(name="🧹 Messages Cleared")
+            embed.add_field(name="Deleted", value=str(deleted_count), inline=True)
+            embed.add_field(name="Channel", value=ctx.channel.mention, inline=True)
+            if member:
+                embed.add_field(name="From user", value=member.mention, inline=True)
+            embed.add_field(name="By", value=ctx.author.mention, inline=False)
+
+            await ctx.send(embed=embed, delete_after=5)
+        except discord.Forbidden:
+            await ctx.send("⚠️ Error: I don't have permission to delete messages here.", delete_after=5)
+        except discord.HTTPException as e:
+            await ctx.send(f"⚠️ Error deleting messages: {e}", delete_after=5)
+        except Exception as e:
+            await ctx.send(f"⚠️ Error: {e}", delete_after=5)
+
+    @clear.error
+    async def clear_error(self, ctx, error):
+        if isinstance(error, commands.MissingPermissions):
+            await ctx.send("⚠️ You need the **Manage Messages** permission to use this command.", delete_after=5)
+        elif isinstance(error, commands.BotMissingPermissions):
+            await ctx.send("⚠️ I need the **Manage Messages** permission to use this command.", delete_after=5)
+        elif isinstance(error, commands.MissingRequiredArgument):
+            await ctx.send("⚠️ Usage: `.clear <amount> [@user]` — example: `.clear 50` or `.clear 20 @user`.", delete_after=8)
+        elif isinstance(error, commands.BadArgument):
+            await ctx.send("⚠️ Invalid argument. Amount must be a number, and the user must be a valid mention/ID.", delete_after=8)
 
     @commands.command()
     @commands.has_permissions(ban_members=True)

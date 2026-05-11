@@ -101,8 +101,8 @@ class Hora(commands.Cog):
         # Calcular timestamps para cada día (Inputs son horas UTC)
         martes_timestamp = self.get_next_weekday_time(1, 12, 0)
         jueves_timestamp = self.get_next_weekday_time(3, 18, 0)
-        sabado_timestamp = self.get_next_weekday_time(5, 22, 0)
-        domingo_timestamp = self.get_next_weekday_time(6, 19, 0)
+        sabado_timestamp = self.get_next_weekday_time(5, 19, 0)
+        domingo_timestamp = self.get_next_weekday_time(6, 20, 0)
         
         # Crear embed con los horarios
         embed = discord.Embed(
@@ -123,8 +123,8 @@ class Hora(commands.Cog):
             value=(
                 f"**Martes / Terça:** 12:00 UTC <t:{martes_timestamp}:R> (<t:{martes_timestamp}:F>)\n"
                 f"**Jueves / Quinta:** 18:00 UTC <t:{jueves_timestamp}:R> (<t:{jueves_timestamp}:F>)\n"
-                f"**Sábado / Sábado:** 22:00 UTC <t:{sabado_timestamp}:R> (<t:{sabado_timestamp}:F>)\n"
-                f"**Domingo / Domingo:** 19:00 UTC <t:{domingo_timestamp}:R> (<t:{domingo_timestamp}:F>)"
+                f"**Sábado / Sábado:** 19:00 UTC <t:{sabado_timestamp}:R> (<t:{sabado_timestamp}:F>)\n"
+                f"**Domingo / Domingo:** 20:00 UTC <t:{domingo_timestamp}:R> (<t:{domingo_timestamp}:F>)"
             ),
             inline=False
         )
@@ -137,7 +137,7 @@ class Hora(commands.Cog):
         now_utc = datetime.now(pytz.utc)
         fecha_hora_utc = now_utc.strftime('%d/%m/%Y %H:%M:%S UTC')
         timestamp = int(now_utc.timestamp())
-        gbr_timestamp = self.get_next_weekday_time(6, 21, 0)
+        gbr_timestamp = self.get_next_weekday_time(6, 18, 0)
         
         embed = self._create_gbr_embed(fecha_hora_utc, timestamp, gbr_timestamp)
         await interaction.response.send_message(embed=embed)
@@ -148,7 +148,7 @@ class Hora(commands.Cog):
         now_utc = datetime.now(pytz.utc)
         fecha_hora_utc = now_utc.strftime('%d/%m/%Y %H:%M:%S UTC')
         timestamp = int(now_utc.timestamp())
-        gbr_timestamp = self.get_next_weekday_time(6, 21, 0)
+        gbr_timestamp = self.get_next_weekday_time(6, 18, 0)
         
         embed = self._create_gbr_embed(fecha_hora_utc, timestamp, gbr_timestamp)
         await ctx.send(embed=embed)
@@ -168,7 +168,7 @@ class Hora(commands.Cog):
         embed.add_field(
             name="📅 Horario de GBR: / Horário de GBR:",
             value=(
-                f"**Domingo / Domingo:** 21:00 UTC <t:{gbr_timestamp}:R> (<t:{gbr_timestamp}:F>)"
+                f"**Domingo / Domingo:** 18:00 UTC <t:{gbr_timestamp}:R> (<t:{gbr_timestamp}:F>)"
             ),
             inline=False
         )

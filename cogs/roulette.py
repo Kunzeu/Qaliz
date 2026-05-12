@@ -192,8 +192,14 @@ class Roulette(commands.Cog):
             desc = "\n".join(f"**{i}.** <@{wid}>" for i, wid in enumerate(winner_ids, start=1))
         if len(desc) > 4096:
             desc = desc[:4085] + "\n…"
-        first = await self.bot.fetch_user(winner_ids[0])
-        win_embed.set_thumbnail(url=first.display_avatar.url if first.display_avatar else None)
+
+        win_embed = discord.Embed(title=title, description=desc, color=0x00ff00)
+        try:
+            first = await self.bot.fetch_user(winner_ids[0])
+            if first.display_avatar:
+                win_embed.set_thumbnail(url=first.display_avatar.url)
+        except Exception as e:
+            print(f"⚠️ No se pudo obtener avatar del ganador: {e}")
         win_embed.add_field(name="Participantes", value=str(len(participants)), inline=True)
         win_embed.add_field(name="Ganadores sorteados", value=str(k), inline=True)
         if requested > len(participants):
@@ -203,12 +209,26 @@ class Roulette(commands.Cog):
                 inline=False,
             )
         win_embed.set_footer(text="¡Gracias por participar!")
-        
-        await msg.edit(embed=win_embed)
-        
-        # Limpiar la ruleta (memoria + Firebase)
+
+        try:
+            await msg.edit(embed=win_embed)
+        except Exception as e:
+            print(f"❌ Error editando embed de ganadores: {e}")
+            await ctx.send(embed=win_embed)
+
         del self.active_roulettes[channel_id]
         await self.bot.db.deleteRoulette(channel_id)
+
+    @spin_roulette.error
+    async def spin_roulette_error(self, ctx, error):
+        original = getattr(error, "original", error)
+        print(f"❌ Error en girar_ruleta: {type(original).__name__}: {original}")
+        import traceback
+        traceback.print_exception(type(original), original, original.__traceback__)
+        try:
+            await ctx.send(f"⚠️ Error al girar la ruleta: `{type(original).__name__}: {original}`")
+        except Exception:
+            pass
 
     @commands.command(name='participantes', aliases=['lista_ruleta'])
     async def list_participants(self, ctx):

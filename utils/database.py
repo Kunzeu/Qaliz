@@ -237,17 +237,21 @@ class DatabaseManager:
             return False
 
     async def saveRoulette(self, channel_id, data):
-        """Crea o actualiza una ruleta. `data` debe incluir creator_id, msg_id, guild_id, active, participants (list)."""
+        """Crea o actualiza una ruleta (merge). Solo se escriben las claves presentes en `data` (excepto channel_id y updated_at)."""
         try:
-            payload = {
-                'channel_id': int(channel_id),
-                'guild_id': int(data.get('guild_id', 0)),
-                'creator_id': int(data.get('creator_id', 0)),
-                'msg_id': int(data.get('msg_id', 0)),
-                'active': bool(data.get('active', True)),
-                'participants': [int(uid) for uid in data.get('participants', [])],
-                'updated_at': datetime.now(),
-            }
+            payload = {'channel_id': int(channel_id), 'updated_at': datetime.now()}
+            if 'guild_id' in data:
+                payload['guild_id'] = int(data['guild_id'])
+            if 'creator_id' in data:
+                payload['creator_id'] = int(data['creator_id'])
+            if 'msg_id' in data:
+                payload['msg_id'] = int(data['msg_id'])
+            if 'active' in data:
+                payload['active'] = bool(data['active'])
+            if 'participants' in data:
+                payload['participants'] = [int(uid) for uid in data['participants']]
+            if 'winner_count' in data:
+                payload['winner_count'] = int(data['winner_count'])
             self.roulettes.document(str(channel_id)).set(payload, merge=True)
             return True
         except Exception as error:

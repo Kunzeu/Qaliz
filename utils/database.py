@@ -32,6 +32,7 @@ class DatabaseManager:
         self.reminders = self.db.collection('reminders')
         self.blacklist = self.db.collection('blacklist')
         self.roulettes = self.db.collection('roulettes')
+        self.events = self.db.collection('events')
 
     async def connect(self):
         try:
@@ -291,5 +292,90 @@ class DatabaseManager:
         except Exception as error:
             print(f"❌ Error obteniendo ruletas activas: {str(error)}")
             return []
+
+    # ─────────────────────────────────────────────────────────
+    #  Events
+    # ─────────────────────────────────────────────────────────
+
+    async def saveEvent(self, event_data: dict) -> bool:
+        """Guarda un nuevo evento en Firestore."""
+        try:
+            doc_id = str(event_data.get("doc_id", event_data.get("message_id", "")))
+            payload = {
+                "guild_id":   int(event_data.get("guild_id", 0)),
+                "channel_id": int(event_data.get("channel_id", 0)),
+                "message_id": int(event_data.get("message_id", 0)),
+                "creator_id": int(event_data.get("creator_id", 0)),
+                "title":      str(event_data.get("title", "")),
+                "start_ts":   int(event_data.get("start_ts", 0)),
+                "end_ts":     int(event_data.get("end_ts", 0)),
+                "status":     str(event_data.get("status", "open")),
+                "roles":      event_data.get("roles", []),
+                "created_at": event_data.get("created_at", datetime.now()),
+            }
+            self.events.document(doc_id).set(payload)
+            print(f"✅ Evento guardado: {doc_id}")
+            return True
+        except Exception as e:
+            print(f"❌ Error guardando evento: {e}")
+            return False
+
+    async def getEvent(self, doc_id: str) -> dict | None:
+        """Obtiene un evento por su ID (= message_id)."""
+        try:
+            doc = self.events.document(str(doc_id)).get()
+            if not doc.exists:
+                return None
+            data = doc.to_dict()
+            data["doc_id"] = doc.id
+            return data
+        except Exception as e:
+            print(f"❌ Error obteniendo evento {doc_id}: {e}")
+            return None
+
+    async def updateEventRoles(self, doc_id: str, roles: list) -> bool:
+        """Actualiza la lista de roles (con participantes) de un evento."""
+        try:
+            self.events.document(str(doc_id)).update({"roles": roles})
+            return True
+        except Exception as e:
+            print(f"❌ Error actualizando roles del evento {doc_id}: {e}")
+            return False
+
+    async def updateEventStatus(self, doc_id: str, status: str) -> bool:
+        """Actualiza el estado de un evento (open / closed / cancelled)."""
+        try:
+            self.events.document(str(doc_id)).update({"status": status})
+            return True
+        except Exception as e:
+            print(f"❌ Error actualizando estado del evento {doc_id}: {e}")
+            return False
+
+    async def getOpenEvents(self) -> list:
+        """Devuelve todos los eventos con status='open'."""
+        try:
+            results = []
+            for doc in self.events.where("status", "==", "open").stream():
+                data = doc.to_dict() or {}
+                data["doc_id"] = doc.id
+                results.append(data)
+            return results
+        except Exception as e:
+            print(f"❌ Error obteniendo eventos abiertos: {e}")
+            return []
+
+    async def getGuildEvents(self, guild_id: str) -> list:
+        """Devuelve todos los eventos de un servidor."""
+        try:
+            results = []
+            for doc in self.events.where("guild_id", "==", int(guild_id)).stream():
+                data = doc.to_dict() or {}
+                data["doc_id"] = doc.id
+                results.append(data)
+            return results
+        except Exception as e:
+            print(f"❌ Error obteniendo eventos del servidor {guild_id}: {e}")
+            return []
+
 
 dbManager = DatabaseManager()

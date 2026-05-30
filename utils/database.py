@@ -33,6 +33,7 @@ class DatabaseManager:
         self.blacklist = self.db.collection('blacklist')
         self.roulettes = self.db.collection('roulettes')
         self.events = self.db.collection('events')
+        self.logAutoupload = self.db.collection('log_autoupload')
 
     async def connect(self):
         try:
@@ -375,6 +376,49 @@ class DatabaseManager:
             return results
         except Exception as e:
             print(f"❌ Error obteniendo eventos del servidor {guild_id}: {e}")
+            return []
+
+    async def getLogAutouploadConfig(self, guild_id: str) -> dict:
+        try:
+            doc = self.logAutoupload.document(str(guild_id)).get()
+            if not doc.exists:
+                return {"enabled": False, "channel_id": None, "only_success": True}
+            data = doc.to_dict() or {}
+            return {
+                "enabled": bool(data.get("enabled", False)),
+                "channel_id": data.get("channel_id"),
+                "only_success": bool(data.get("only_success", True)),
+            }
+        except Exception as e:
+            print(f"❌ Error leyendo config autoupload {guild_id}: {e}")
+            return {"enabled": False, "channel_id": None, "only_success": True}
+
+    async def setLogAutouploadConfig(self, guild_id: str, config: dict) -> bool:
+        try:
+            payload = {
+                "enabled": bool(config.get("enabled", False)),
+                "only_success": bool(config.get("only_success", True)),
+                "updated_at": datetime.now(),
+            }
+            if config.get("channel_id") is not None:
+                payload["channel_id"] = int(config["channel_id"])
+            self.logAutoupload.document(str(guild_id)).set(payload, merge=True)
+            return True
+        except Exception as e:
+            print(f"❌ Error guardando config autoupload {guild_id}: {e}")
+            return False
+
+    async def getEnabledLogAutouploadGuilds(self) -> list[dict]:
+        try:
+            results = []
+            for doc in self.logAutoupload.where("enabled", "==", True).stream():
+                data = doc.to_dict() or {}
+                data["guild_id"] = doc.id
+                if data.get("channel_id"):
+                    results.append(data)
+            return results
+        except Exception as e:
+            print(f"❌ Error listando guilds autoupload: {e}")
             return []
 
 

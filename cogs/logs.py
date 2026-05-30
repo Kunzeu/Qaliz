@@ -36,18 +36,67 @@ BOON_EMOJIS_FILE = os.path.normpath(
 
 # Emojis de boons subidos al servidor (nombre = boon, p. ej. <:Might:…>)
 DEFAULT_BOON_EMOJIS: dict[str, str] = {
-    "Aegis":        "<:Aegis:1510139818749857863>",
-    "Alacrity":     "<:Alacrity:1510139817453686874>",
-    "Fury":         "<:Fury:1510139815163596914>",
-    "Might":        "<:Might:1510139813184012288>",
-    "Protection":   "<:Protection:1510139811518746825>",
-    "Quickness":    "<:Quickness:1510139809451212843>",
-    "Regeneration": "<:Regeneration:1510139808112967780>",
-    "Resistance":   "<:Resistance:1510139806527655976>",
-    "Resolution":   "<:Resolution:1510139804426440715>",
-    "Stability":    "<:Stability:1510139802102792303>",
-    "Swiftness":    "<:Swiftness:1510139800328470598>",
-    "Vigor":        "<:Vigor:1510139798701211789>",
+    "Aegis":        "<:Aegis:1510299870798414047>",
+    "Alacrity":     "<:Alacrity:1510299869191864442>",
+    "Fury":         "<:Fury:1510299867300233236>",
+    "Might":        "<:Might:1510299865090101310>",
+    "Protection":   "<:Protection:1510299863563108383>",
+    "Quickness":    "<:Quickness:1510299860752924915>",
+    "Regeneration": "<:Regeneration:1510299858324684850>",
+    "Resistance":   "<:Resistance:1510299856508293180>",
+    "Resolution":   "<:Resolution:1510299854528577776>",
+    "Stability":    "<:Stability:1510299845771137085>",
+    "Swiftness":    "<:Swiftness:1510299843505946795>",
+    "Vigor":        "<:Vigor:1510299841685622965>",
+}
+
+# Emojis tango de specs (nombre = {Spec}_tango_icon_48px)
+DEFAULT_SPEC_EMOJIS: dict[str, str] = {
+    "Elementalist": "<:Elementalist_tango_icon_48px:1509768341550534676>",
+    "Mesmer":       "<:Mesmer_tango_icon_48px:1509768339784990880>",
+    "Engineer":     "<:Engineer_tango_icon_48px:1509768337905811627>",
+    "Ranger":       "<:Ranger_tango_icon_48px:1509768336127561808>",
+    "Thief":        "<:Thief_tango_icon_48px:1509768334369886379>",
+    "Guardian":     "<:Guardian_tango_icon_48px:1509768332365139988>",
+    "Warrior":      "<:Warrior_tango_icon_48px:1509768330389487626>",
+    "Necromancer":  "<:Necromancer_tango_icon_48px:1509768265625243679>",
+    "Revenant":     "<:Revenant_tango_icon_48px:1509768267420405831>",
+    "Tempest":      "<:Tempest_tango_icon_48px:1509768328619753594>",
+    "Chronomancer": "<:Chronomancer_tango_icon_48px:1509768326916608070>",
+    "Reaper":       "<:Reaper_tango_icon_48px:1509768324962062446>",
+    "Scrapper":     "<:Scrapper_tango_icon_48px:1509768322777092127>",
+    "Druid":        "<:Druid_tango_icon_48px:1509768320658968576>",
+    "Daredevil":    "<:Daredevil_tango_icon_48px:1509768318326935664>",
+    "Dragonhunter": "<:Dragonhunter_tango_icon_48px:1509768316447625338>",
+    "Herald":       "<:Herald_tango_icon_48px:1509768314543673364>",
+    "Berserker":    "<:Berserker_tango_icon_48px:1509768312941318265>",
+    "Weaver":       "<:Weaver_tango_icon_48px:1509768311427301457>",
+    "Mirage":       "<:Mirage_tango_icon_48px:1509768309694795896>",
+    "Scourge":      "<:Scourge_tango_icon_48px:1509768307459358802>",
+    "Holosmith":    "<:Holosmith_tango_icon_48px:1509768305227857951>",
+    "Soulbeast":    "<:Soulbeast_tango_icon_48px:1509768303327842396>",
+    "Deadeye":      "<:Deadeye_tango_icon_48px:1509768301142872124>",
+    "Firebrand":    "<:Firebrand_tango_icon_48px:1509768298865229824>",
+    "Renegade":     "<:Renegade_tango_icon_48px:1509768292582297760>",
+    "Spellbreaker": "<:Spellbreaker_tango_icon_48px:1509768289847607396>",
+    "Catalyst":     "<:Catalyst_tango_icon_48px:1509768287876026448>",
+    "Virtuoso":     "<:Virtuoso_tango_icon_48px:1509768286001303634>",
+    "Harbinger":    "<:Harbinger_tango_icon_48px:1509768281869783231>",
+    "Mechanist":    "<:Mechanist_tango_icon_48px:1509768280313954384>",
+    "Untamed":      "<:Untamed_tango_icon_48px:1509768278518792192>",
+    "Specter":      "<:Specter_tango_icon_48px:1509768276543275169>",
+    "Willbender":   "<:Willbender_tango_icon_48px:1509768274894655538>",
+    "Vindicator":   "<:Vindicator_tango_icon_48px:1509768273267523594>",
+    "Bladesworn":   "<:Bladesworn_tango_icon_48px:1509768271010988042>",
+    "Paragon":      "<:Paragon_tango_icon_48px:1509768269085544528>",
+    "Conduit":      "<:Conduit_tango_icon_48px:1509768263717093477>",
+    "Luminary":     "<:Luminary_tango_icon_48px:1509768261930061834>",
+    "Antiquary":    "<:Antiquary_tango_icon_48px:1509768259950612490>",
+    "Galeshot":     "<:Galeshot_tango_icon_48px:1509768258042200104>",
+    "Amalgam":      "<:Amalgam_tango_icon_48px:1509768255420629092>",
+    "Ritualist":    "<:Ritualist_tango_icon_48px:1509768253788913775>",
+    "Troubadour":   "<:Troubadour_tango_icon_48px:1509768252170178570>",
+    "Evoker":       "<:Evoker_tango_icon_48px:1509768250253377688>",
 }
 
 ALLOWED_EXTENSIONS = {".evtc", ".zevtc"}
@@ -215,11 +264,24 @@ def _resolve_boon_emoji(guild: Optional[discord.Guild], boon_name: str) -> Optio
     return DEFAULT_BOON_EMOJIS.get(boon_name)
 
 
+def _resolve_spec_emoji(guild: Optional[discord.Guild], spec_name: str) -> Optional[str]:
+    """Emoji del servidor → cache guardado → IDs por defecto (bot en el guild del emoji)."""
+    for candidate in (
+        f"{spec_name}_tango_icon_48px",
+        f"gw2_{spec_name.lower()}",
+        spec_name,
+    ):
+        resolved = _guild_emoji_str(guild, candidate)
+        if resolved:
+            return resolved
+    if spec_name in _spec_emojis_cache:
+        return _spec_emojis_cache[spec_name]
+    return DEFAULT_SPEC_EMOJIS.get(spec_name)
+
+
 def _make_spec_display(guild: Optional[discord.Guild] = None):
     def display(spec_name: str) -> str:
-        if spec_name in _spec_emojis_cache:
-            return _spec_emojis_cache[spec_name]
-        resolved = _guild_emoji_str(guild, f"gw2_{spec_name.lower()}")
+        resolved = _resolve_spec_emoji(guild, spec_name)
         if resolved:
             return resolved
         icon_url = SPEC_ICON_URL.get(spec_name, "")
@@ -252,10 +314,7 @@ def _refresh_boon_emojis_from_guilds(bot: commands.Bot) -> None:
 
 def _spec_display(spec_name: str) -> str:
     """Custom emoji inline si existe; si no, spec como hiperlink al icono del wiki."""
-    if spec_name in _spec_emojis_cache:
-        return _spec_emojis_cache[spec_name]   # '<:gw2_firebrand:123456>'
-    icon_url = SPEC_ICON_URL.get(spec_name, "")
-    return f"[{spec_name}]({icon_url})" if icon_url else spec_name
+    return _make_spec_display()(spec_name)
 
 
 def _boon_display(boon_name: str) -> str:

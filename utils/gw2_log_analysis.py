@@ -18,7 +18,7 @@ NOTES_FIELD_NAME = "⚠️ Avisos"
 DISCORD_FIELD_MAX = 1024
 
 # Caída (down) — emoji del servidor
-DOWNED_EMOJI = "<:Alert_Target_Downed_Ally:1510264830463049829>"
+DOWNED_EMOJI = "<:Alert_Target_Downed_Ally:1510299839382945792>"
 
 WINGMAN_BOSS_URL = "https://gw2wingman.nevermindcreations.de/api/boss"
 DPS_REPORT_JSON_URL = "https://dps.report/getJson"

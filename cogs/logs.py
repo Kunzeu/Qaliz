@@ -19,7 +19,8 @@ from utils.gw2_log_analysis import (
 from utils.log_autouploader import (
     DEFAULT_ARCDPS_DIR,
     LogAutouploader,
-    resolve_log_dir,
+    arcdps_log_dir_candidates,
+    find_arcdps_log_dirs,
 )
 
 logger = logging.getLogger(__name__)
@@ -497,9 +498,12 @@ class Logs(commands.Cog):
         if not _env_bool("LOG_AUTOUPLOAD_ENABLED"):
             return
 
-        log_dir = resolve_log_dir(os.getenv("ARCDPS_LOG_DIR") or DEFAULT_ARCDPS_DIR)
-        if not log_dir:
-            logger.warning("Autoupload activado pero la carpeta arcdps no existe")
+        log_dirs = find_arcdps_log_dirs()
+        if not log_dirs:
+            logger.warning(
+                "Autoupload activado pero ninguna carpeta arcdps existe — probadas: %s",
+                arcdps_log_dir_candidates(),
+            )
             return
 
         if self._autouploader:
@@ -507,7 +511,7 @@ class Logs(commands.Cog):
 
         self._autouploader = LogAutouploader(
             self.bot,
-            log_dir=log_dir,
+            log_dirs=log_dirs,
             poll_seconds=float(os.getenv("LOG_AUTOUPLOAD_POLL_SECONDS", "8")),
             only_success=_env_bool("LOG_AUTOUPLOAD_ONLY_SUCCESS", True),
             min_players=_env_int("LOG_AUTOUPLOAD_MIN_PLAYERS", 4),
@@ -699,21 +703,49 @@ class Logs(commands.Cog):
             await interaction.response.send_message("❌ No se pudo guardar la configuración.", ephemeral=True)
             return
 
-        folder = resolve_log_dir(os.getenv("ARCDPS_LOG_DIR") or DEFAULT_ARCDPS_DIR) or "(no encontrada)"
+        folders = find_arcdps_log_dirs()
         env_on = _env_bool("LOG_AUTOUPLOAD_ENABLED")
+        env_dirs = os.getenv("ARCDPS_LOG_DIRS") or os.getenv("ARCDPS_LOG_DIR")
+        tried = arcdps_log_dir_candidates()
+        folders_text = "\n".join(f"• `{f}`" for f in folders) if folders else "(ninguna encontrada)"
         hint = (
             f"✅ Auto-upload activado en {canal.mention}.\n"
-            f"**Carpeta:** `{folder}`\n"
+            f"**Carpetas vigiladas ({len(folders)}):**\n{folders_text}\n"
             f"**Solo kills:** {'Sí' if solo_exitos else 'No'}\n\n"
         )
+        if not folders:
+            hint += (
+                "⚠️ El bot no encuentra ninguna carpeta de arcdps en este servidor.\n"
+                f"Rutas probadas:\n"
+                + "\n".join(f"• `{p}`" for p in tried)
+                + "\n\n"
+                "**En el `.env` del VPS** (varias personas, separadas por `;`):\n"
+                "```\n"
+                "LOG_AUTOUPLOAD_ENABLED=true\n"
+                "ARCDPS_LOG_DIRS="
+                f"{DEFAULT_ARCDPS_DIR};"
+                "C:\\Users\\OtroJugador\\Documents\\Guild Wars 2\\addons\\arcdps\\arcdps.cbtlogs\n"
+                "```\n"
+                "Cada jugador sincroniza su carpeta al VPS en la ruta que le corresponda.\n\n"
+            )
+        elif not env_dirs:
+            hint += (
+                "💡 Para varias personas, define en `.env`:\n"
+                f"`ARCDPS_LOG_DIRS={DEFAULT_ARCDPS_DIR};...`\n\n"
+            )
         if not env_on:
             hint += (
-                "⚠️ Añade `LOG_AUTOUPLOAD_ENABLED=true` al `.env` del bot y reinícialo "
+                "⚠️ Añade `LOG_AUTOUPLOAD_ENABLED=true` al `.env` del VPS y reinícialo "
                 "para que empiece a vigilar la carpeta."
             )
-        else:
+        elif folders:
             await self._maybe_start_autouploader()
             hint += "👀 El watcher está activo — los logs nuevos se subirán solos tras cada pelea."
+        elif env_on:
+            hint += (
+                "⚠️ `LOG_AUTOUPLOAD_ENABLED=true` está activo, pero el watcher no arranca "
+                "hasta que exista la carpeta de logs."
+            )
 
         await interaction.response.send_message(hint, ephemeral=True)
 
@@ -737,7 +769,8 @@ class Logs(commands.Cog):
     async def autoupload_estado(self, interaction: discord.Interaction) -> None:
         await interaction.response.defer(ephemeral=True)
 
-        folder = resolve_log_dir(os.getenv("ARCDPS_LOG_DIR") or DEFAULT_ARCDPS_DIR)
+        folders = find_arcdps_log_dirs()
+        watched = self._autouploader.log_dirs if self._autouploader else folders
         env_on = _env_bool("LOG_AUTOUPLOAD_ENABLED")
         watcher = self._autouploader is not None and self._autouploader.running
 
@@ -753,9 +786,16 @@ class Logs(commands.Cog):
             channel_lines.append(f"• Guild `{t['guild_id']}` → {ch_name}")
 
         stats = self._autouploader.stats if self._autouploader else None
+        if watched:
+            folder_line = f"**Carpetas arcdps ({len(watched)}):**\n" + "\n".join(f"• `{f}`" for f in watched)
+        else:
+            folder_line = (
+                "**Carpetas arcdps:** NINGUNA ENCONTRADA\n"
+                + "\n".join(f"• `{p}`" for p in arcdps_log_dir_candidates())
+            )
         lines = [
             f"**Watcher global:** {'🟢 activo' if watcher else '🔴 inactivo'} (`LOG_AUTOUPLOAD_ENABLED={env_on}`)",
-            f"**Carpeta arcdps:** `{folder or 'NO ENCONTRADA'}`",
+            folder_line,
             f"**Canales configurados:** {len(targets)}",
         ]
         if channel_lines:

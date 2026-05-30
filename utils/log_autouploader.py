@@ -6,6 +6,7 @@ import asyncio
 import json
 import logging
 import os
+import re
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any, Callable, Optional
@@ -18,23 +19,78 @@ from utils.gw2_log_analysis import upload_log_bytes
 logger = logging.getLogger(__name__)
 
 LOG_EXTENSIONS = {".evtc", ".zevtc"}
-DEFAULT_ARCDPS_DIR = os.path.join(
-    os.path.expanduser("~"),
-    "Documents",
-    "Guild Wars 2",
-    "addons",
-    "arcdps",
-    "arcdps.cbtlogs",
-)
-STATE_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data")
+_PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+# Carpeta real de arcdps en el PC donde se generan los logs
+DEFAULT_ARCDPS_DIR = r"C:\Users\Kunzeu\Documents\Guild Wars 2\addons\arcdps\arcdps.cbtlogs"
+STATE_DIR = os.path.join(_PROJECT_ROOT, "data")
 STATE_FILE = os.path.join(STATE_DIR, "log_autoupload_state.dat")
 
 
-def resolve_log_dir(path: Optional[str]) -> Optional[str]:
+def resolve_log_dir(path: Optional[str], create: bool = False) -> Optional[str]:
     if not path:
         return None
     expanded = os.path.normpath(os.path.expandvars(os.path.expanduser(path.strip())))
-    return expanded if os.path.isdir(expanded) else None
+    if os.path.isdir(expanded):
+        return expanded
+    if create:
+        try:
+            os.makedirs(expanded, exist_ok=True)
+        except OSError as exc:
+            logger.warning("No se pudo crear carpeta arcdps %s: %s", expanded, exc)
+            return None
+        return expanded if os.path.isdir(expanded) else None
+    return None
+
+
+def arcdps_log_dir_candidates() -> list[str]:
+    """Rutas probadas: env → carpeta Kunzeu → OneDrive."""
+    home = os.path.expanduser("~")
+    env_path = os.getenv("ARCDPS_LOG_DIR")
+    candidates: list[str] = []
+    if env_path:
+        candidates.append(env_path)
+    candidates.append(DEFAULT_ARCDPS_DIR)
+    candidates.append(os.path.join(
+        home, "OneDrive", "Documents", "Guild Wars 2", "addons", "arcdps", "arcdps.cbtlogs",
+    ))
+    seen: set[str] = set()
+    unique: list[str] = []
+    for path in candidates:
+        norm = os.path.normpath(os.path.expandvars(os.path.expanduser(path.strip())))
+        if norm not in seen:
+            seen.add(norm)
+            unique.append(norm)
+    return unique
+
+
+def find_arcdps_log_dirs() -> list[str]:
+    """Todas las carpetas arcdps configuradas (varias personas)."""
+    raw_multi = os.getenv("ARCDPS_LOG_DIRS")
+    raw_single = os.getenv("ARCDPS_LOG_DIR")
+    allow_create = bool(raw_multi or raw_single)
+
+    candidates: list[str] = []
+    if raw_multi:
+        candidates.extend(part.strip() for part in re.split(r"[;\n]+", raw_multi) if part.strip())
+    elif raw_single:
+        candidates.append(raw_single.strip())
+    else:
+        candidates = arcdps_log_dir_candidates()
+
+    seen: set[str] = set()
+    resolved: list[str] = []
+    for path in candidates:
+        folder = resolve_log_dir(path, create=allow_create)
+        if folder and folder not in seen:
+            seen.add(folder)
+            resolved.append(folder)
+    return resolved
+
+
+def find_arcdps_log_dir() -> Optional[str]:
+    """Primera carpeta disponible (compatibilidad)."""
+    dirs = find_arcdps_log_dirs()
+    return dirs[0] if dirs else None
 
 
 def iter_log_files(log_dir: str) -> list[str]:
@@ -70,7 +126,7 @@ class AutouploadStats:
 @dataclass
 class LogAutouploader:
     bot: discord.Client
-    log_dir: str
+    log_dirs: list[str]
     poll_seconds: float = 8.0
     only_success: bool = True
     min_players: int = 4
@@ -130,11 +186,12 @@ class LogAutouploader:
         if self._processed:
             return 0
         count = 0
-        for path in iter_log_files(self.log_dir):
-            fp = file_fingerprint(path)
-            if fp:
-                self._mark_processed(path, fp, skipped=True)
-                count += 1
+        for log_dir in self.log_dirs:
+            for path in iter_log_files(log_dir):
+                fp = file_fingerprint(path)
+                if fp:
+                    self._mark_processed(path, fp, skipped=True)
+                    count += 1
         logger.info("Autoupload: baseline de %s archivos existentes", count)
         return count
 
@@ -144,7 +201,7 @@ class LogAutouploader:
         self.baseline_existing_files()
         self._session = aiohttp.ClientSession()
         self._task = asyncio.create_task(self._run_loop())
-        logger.info("Autoupload iniciado — vigilando %s", self.log_dir)
+        logger.info("Autoupload iniciado — vigilando %s carpeta(s): %s", len(self.log_dirs), self.log_dirs)
 
     async def stop(self) -> None:
         if self._task:
@@ -169,28 +226,29 @@ class LogAutouploader:
             await asyncio.sleep(self.poll_seconds)
 
     async def _scan_once(self) -> None:
-        for path in iter_log_files(self.log_dir):
-            if path in self._pending:
-                continue
-            fp = file_fingerprint(path)
-            if not fp or self._is_processed(path, fp):
-                continue
-            if fp["size"] > self.max_file_size:
-                self._mark_processed(path, fp, skipped=True)
-                self._stats.uploads_skipped += 1
-                continue
-            if not await self._wait_for_stable(path):
-                continue
-            fp = file_fingerprint(path)
-            if not fp or self._is_processed(path, fp):
-                continue
-            self._pending.add(path)
-            self._stats.pending = len(self._pending)
-            try:
-                await self._process_file(path, fp)
-            finally:
-                self._pending.discard(path)
+        for log_dir in self.log_dirs:
+            for path in iter_log_files(log_dir):
+                if path in self._pending:
+                    continue
+                fp = file_fingerprint(path)
+                if not fp or self._is_processed(path, fp):
+                    continue
+                if fp["size"] > self.max_file_size:
+                    self._mark_processed(path, fp, skipped=True)
+                    self._stats.uploads_skipped += 1
+                    continue
+                if not await self._wait_for_stable(path):
+                    continue
+                fp = file_fingerprint(path)
+                if not fp or self._is_processed(path, fp):
+                    continue
+                self._pending.add(path)
                 self._stats.pending = len(self._pending)
+                try:
+                    await self._process_file(path, fp)
+                finally:
+                    self._pending.discard(path)
+                    self._stats.pending = len(self._pending)
 
     async def _wait_for_stable(self, path: str, checks: int = 3, interval: float = 1.5) -> bool:
         last_size = -1

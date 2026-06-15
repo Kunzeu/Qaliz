@@ -495,13 +495,20 @@ class Logs(commands.Cog):
         return targets
 
     async def _maybe_start_autouploader(self) -> None:
-        if not _env_bool("LOG_AUTOUPLOAD_ENABLED"):
+        env_on = _env_bool("LOG_AUTOUPLOAD_ENABLED")
+        targets = await self._get_autoupload_targets()
+        if not env_on and not targets:
+            logger.info(
+                "Autoupload inactivo: LOG_AUTOUPLOAD_ENABLED=false y no hay destinos en Firestore/env"
+            )
             return
 
         log_dirs = find_arcdps_log_dirs()
         if not log_dirs:
             logger.warning(
-                "Autoupload activado pero ninguna carpeta arcdps existe — probadas: %s",
+                "Autoupload habilitado (env=%s, destinos=%s) pero ninguna carpeta arcdps existe — probadas: %s",
+                env_on,
+                len(targets),
                 arcdps_log_dir_candidates(),
             )
             return
@@ -711,7 +718,9 @@ class Logs(commands.Cog):
         hint = (
             f"✅ Auto-upload activado en {canal.mention}.\n"
             f"**Carpetas vigiladas ({len(folders)}):**\n{folders_text}\n"
-            f"**Solo kills:** {'Sí' if solo_exitos else 'No'}\n\n"
+            f"**Solo kills:** {'Sí' if solo_exitos else 'No'}\n"
+            "**Nota:** este comando configura el canal de destino para este servidor; "
+            "el watcher necesita al menos una carpeta de arcdps disponible.\n\n"
         )
         if not folders:
             hint += (
@@ -721,7 +730,6 @@ class Logs(commands.Cog):
                 + "\n\n"
                 "**En el `.env` del VPS** (varias personas, separadas por `;`):\n"
                 "```\n"
-                "LOG_AUTOUPLOAD_ENABLED=true\n"
                 "ARCDPS_LOG_DIRS="
                 f"{DEFAULT_ARCDPS_DIR};"
                 "C:\\Users\\OtroJugador\\Documents\\Guild Wars 2\\addons\\arcdps\\arcdps.cbtlogs\n"
@@ -735,10 +743,10 @@ class Logs(commands.Cog):
             )
         if not env_on:
             hint += (
-                "⚠️ Añade `LOG_AUTOUPLOAD_ENABLED=true` al `.env` del VPS y reinícialo "
-                "para que empiece a vigilar la carpeta."
+                "ℹ️ `LOG_AUTOUPLOAD_ENABLED` está en `false`, pero este servidor ya tiene destino en Firestore, "
+                "así que el watcher puede arrancar igualmente."
             )
-        elif folders:
+        if folders:
             await self._maybe_start_autouploader()
             hint += "👀 El watcher está activo — los logs nuevos se subirán solos tras cada pelea."
         elif env_on:
@@ -794,7 +802,8 @@ class Logs(commands.Cog):
                 + "\n".join(f"• `{p}`" for p in arcdps_log_dir_candidates())
             )
         lines = [
-            f"**Watcher global:** {'🟢 activo' if watcher else '🔴 inactivo'} (`LOG_AUTOUPLOAD_ENABLED={env_on}`)",
+            f"**Watcher global:** {'🟢 activo' if watcher else '🔴 inactivo'} "
+            f"(`LOG_AUTOUPLOAD_ENABLED={env_on}`, destinos={len(targets)})",
             folder_line,
             f"**Canales configurados:** {len(targets)}",
         ]
@@ -803,8 +812,17 @@ class Logs(commands.Cog):
         if interaction.guild:
             lines.append(
                 f"**Este servidor:** "
-                f"{'🟢 activo' if guild_cfg.get('enabled') else '🔴 inactivo'}"
+                f"{'🟢 destino configurado' if guild_cfg.get('enabled') else '🔴 sin destino configurado'}"
             )
+            if guild_cfg.get('enabled'):
+                lines.append(
+                    f"**Publicación:** {'solo kills exitosos' if guild_cfg.get('only_success', True) else 'kills y wipes'}"
+                )
+            if guild_cfg.get('enabled') and not watcher:
+                lines.append(
+                    "**Diagnóstico:** el canal de este servidor está guardado, "
+                    "pero el watcher global no está procesando logs ahora mismo."
+                )
         if stats:
             lines.extend([
                 "",

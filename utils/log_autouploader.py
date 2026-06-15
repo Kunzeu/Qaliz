@@ -20,8 +20,9 @@ logger = logging.getLogger(__name__)
 
 LOG_EXTENSIONS = {".evtc", ".zevtc"}
 _PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-# Carpeta real de arcdps en el PC donde se generan los logs
-DEFAULT_ARCDPS_DIR = r"C:\Users\Kunzeu\Documents\Guild Wars 2\addons\arcdps\arcdps.cbtlogs"
+ARCDPS_LOG_SUBPATH = os.path.join("Documents", "Guild Wars 2", "addons", "arcdps", "arcdps.cbtlogs")
+# Carpeta por defecto en el perfil local del sistema donde corre el bot
+DEFAULT_ARCDPS_DIR = os.path.join(os.path.expanduser("~"), ARCDPS_LOG_SUBPATH)
 STATE_DIR = os.path.join(_PROJECT_ROOT, "data")
 STATE_FILE = os.path.join(STATE_DIR, "log_autoupload_state.dat")
 
@@ -43,13 +44,20 @@ def resolve_log_dir(path: Optional[str], create: bool = False) -> Optional[str]:
 
 
 def arcdps_log_dir_candidates() -> list[str]:
-    """Rutas probadas: env → carpeta Kunzeu → OneDrive."""
+    """Rutas probadas: env → perfiles locales de Windows → OneDrive."""
     home = os.path.expanduser("~")
+    userprofile = os.getenv("USERPROFILE")
+    onedrive = os.getenv("OneDrive")
     env_path = os.getenv("ARCDPS_LOG_DIR")
     candidates: list[str] = []
     if env_path:
         candidates.append(env_path)
     candidates.append(DEFAULT_ARCDPS_DIR)
+    if userprofile:
+        candidates.append(os.path.join(userprofile, ARCDPS_LOG_SUBPATH))
+    if onedrive:
+        candidates.append(os.path.join(onedrive, ARCDPS_LOG_SUBPATH))
+        candidates.append(os.path.join(onedrive, "Documents", "Guild Wars 2", "addons", "arcdps", "arcdps.cbtlogs"))
     candidates.append(os.path.join(
         home, "OneDrive", "Documents", "Guild Wars 2", "addons", "arcdps", "arcdps.cbtlogs",
     ))
@@ -271,6 +279,12 @@ class LogAutouploader:
         if not self._session or not self.analyze_fn or not self.get_targets_fn:
             return
 
+        targets = await self.get_targets_fn()
+        if not targets:
+            self._stats.last_error = "No hay canales autoupload configurados"
+            logger.warning("Autoupload sin destinos configurados; se pospone %s", os.path.basename(path))
+            return
+
         filename = os.path.basename(path)
         try:
             with open(path, "rb") as f:
@@ -299,8 +313,6 @@ class LogAutouploader:
         n_players = int(encounter.get("numberOfPlayers") or 0)
         success = bool(encounter.get("success"))
         boss = encounter.get("boss") or encounter.get("target") or "?"
-
-        targets = await self.get_targets_fn()
         guild_only_success = {t["guild_id"]: t.get("only_success", self.only_success) for t in targets}
 
         skip_post = False

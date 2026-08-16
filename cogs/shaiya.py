@@ -1,4 +1,6 @@
 import logging
+import re
+import unicodedata
 from datetime import datetime, timedelta
 
 import discord
@@ -38,6 +40,31 @@ def _format_last_seen(value) -> str:
         ts = int(value.timestamp())
         return f"<t:{ts}:R>"
     return str(value)
+
+
+def _is_staff_channel(channel: discord.abc.GuildChannel) -> bool:
+    """Detecta staff-chat aunque el nombre lleve emoji, p. ej. 🎓・staff-chat."""
+    raw = (channel.name or "").casefold()
+    if "staff-chat" in raw or "staffchat" in raw.replace("・", "").replace(" ", ""):
+        return True
+    stripped = "".join(
+        ch for ch in unicodedata.normalize("NFKD", raw)
+        if not unicodedata.combining(ch)
+    )
+    cleaned = re.sub(r"[^a-z0-9]+", "-", stripped).strip("-")
+    compact = cleaned.replace("-", "")
+    return "staff-chat" in cleaned or "staffchat" in compact
+
+
+def _guild_watch_channels(guild: discord.Guild) -> list[discord.abc.GuildChannel]:
+    channels: list[discord.abc.GuildChannel] = []
+    seen: set[int] = set()
+    for channel in list(guild.text_channels) + list(guild.forums) + list(guild.voice_channels):
+        if channel.id in seen:
+            continue
+        seen.add(channel.id)
+        channels.append(channel)
+    return channels
 
 
 def _watch_channel_id(message: discord.Message) -> int | None:
@@ -263,6 +290,44 @@ class Shaiya(commands.Cog):
         label = "interno" if tipo.value == "interno" else "público"
         await interaction.response.send_message(
             f"✅ {canal.mention} contará como actividad **{label}**.",
+            ephemeral=True,
+        )
+
+    @canal.command(name="todos", description="Marca todos los canales del servidor, incluido staff-chat")
+    @app_commands.default_permissions(manage_guild=True)
+    async def canal_todos(self, interaction: discord.Interaction) -> None:
+        if not await self._require_manage_guild(interaction):
+            return
+        guild = interaction.guild
+        if guild is None:
+            return
+
+        public_ids: list[int] = []
+        internal_ids: list[int] = []
+        internal_mentions: list[str] = []
+        for channel in _guild_watch_channels(guild):
+            if _is_staff_channel(channel):
+                internal_ids.append(channel.id)
+                internal_mentions.append(channel.mention)
+            else:
+                public_ids.append(channel.id)
+
+        config = await self.bot.db.setShaiyaChannels(
+            str(guild.id),
+            public_ids,
+            internal_ids,
+        )
+        if not config:
+            await interaction.response.send_message("❌ No se pudieron guardar los canales.", ephemeral=True)
+            return
+        self._apply_config(guild.id, config)
+
+        staff_txt = ", ".join(internal_mentions) if internal_mentions else "ninguno detectado por nombre"
+        await interaction.response.send_message(
+            f"✅ Se marcaron **{len(public_ids)}** canales públicos y "
+            f"**{len(internal_ids)}** internos (incluido staff-chat).\n"
+            f"**Internos:** {staff_txt}\n"
+            "Staff-chat cuenta, pero en la columna interna, no en el ranking público.",
             ephemeral=True,
         )
 

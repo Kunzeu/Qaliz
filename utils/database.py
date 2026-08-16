@@ -478,6 +478,33 @@ class DatabaseManager:
             print(f"❌ Error guardando canal Shaiya {guild_id}/{channel_id}: {e}")
             return None
 
+    async def setShaiyaChannels(self, guild_id: str, public_channels: list[int], internal_channels: list[int]) -> dict | None:
+        """Reemplaza la lista completa de canales públicos e internos."""
+        try:
+            public_ids = []
+            seen: set[int] = set()
+            for cid in public_channels:
+                n = int(cid)
+                if n not in seen:
+                    public_ids.append(n)
+                    seen.add(n)
+            internal_ids = []
+            for cid in internal_channels:
+                n = int(cid)
+                if n not in seen:
+                    internal_ids.append(n)
+                    seen.add(n)
+            payload = {
+                "public_channels": public_ids,
+                "internal_channels": internal_ids,
+                "updated_at": datetime.now(),
+            }
+            self.shaiyaConfig.document(str(guild_id)).set(payload, merge=True)
+            return {"public_channels": public_ids, "internal_channels": internal_ids}
+        except Exception as e:
+            print(f"❌ Error guardando canales Shaiya {guild_id}: {e}")
+            return None
+
     async def removeShaiyaChannel(self, guild_id: str, channel_id: int) -> dict | bool:
         try:
             cid = int(channel_id)

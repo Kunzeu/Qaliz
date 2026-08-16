@@ -34,6 +34,9 @@ class DatabaseManager:
         self.roulettes = self.db.collection('roulettes')
         self.events = self.db.collection('events')
         self.logAutoupload = self.db.collection('log_autoupload')
+        self.shaiyaConfig = self.db.collection('shaiya_config')
+        self.shaiyaGs = self.db.collection('shaiya_gs')
+        self.shaiyaActivity = self.db.collection('shaiya_activity')
 
     async def connect(self):
         try:
@@ -420,6 +423,207 @@ class DatabaseManager:
         except Exception as e:
             print(f"❌ Error listando guilds autoupload: {e}")
             return []
+
+    # ─────────────────────────────────────────────────────────
+    #  Shaiya GS activity
+    # ─────────────────────────────────────────────────────────
+
+    def _shaiya_config_payload(self, data: dict) -> dict:
+        return {
+            "public_channels": [int(x) for x in (data.get("public_channels") or [])],
+            "internal_channels": [int(x) for x in (data.get("internal_channels") or [])],
+        }
+
+    async def getShaiyaConfig(self, guild_id: str) -> dict:
+        try:
+            doc = self.shaiyaConfig.document(str(guild_id)).get()
+            if not doc.exists:
+                return {"public_channels": [], "internal_channels": []}
+            return self._shaiya_config_payload(doc.to_dict() or {})
+        except Exception as e:
+            print(f"❌ Error leyendo config Shaiya {guild_id}: {e}")
+            return {"public_channels": [], "internal_channels": []}
+
+    async def getAllShaiyaConfigs(self) -> dict[str, dict]:
+        try:
+            results: dict[str, dict] = {}
+            for doc in self.shaiyaConfig.stream():
+                results[doc.id] = self._shaiya_config_payload(doc.to_dict() or {})
+            return results
+        except Exception as e:
+            print(f"❌ Error listando configs Shaiya: {e}")
+            return {}
+
+    async def setShaiyaChannel(self, guild_id: str, channel_id: int, kind: str) -> dict | None:
+        """Añade o mueve un canal a público/interno. Devuelve la config resultante."""
+        try:
+            cid = int(channel_id)
+            if kind not in {"publico", "interno"}:
+                return None
+            config = await self.getShaiyaConfig(guild_id)
+            public_channels = [c for c in config["public_channels"] if c != cid]
+            internal_channels = [c for c in config["internal_channels"] if c != cid]
+            if kind == "publico":
+                public_channels.append(cid)
+            else:
+                internal_channels.append(cid)
+            payload = {
+                "public_channels": public_channels,
+                "internal_channels": internal_channels,
+                "updated_at": datetime.now(),
+            }
+            self.shaiyaConfig.document(str(guild_id)).set(payload, merge=True)
+            return {"public_channels": public_channels, "internal_channels": internal_channels}
+        except Exception as e:
+            print(f"❌ Error guardando canal Shaiya {guild_id}/{channel_id}: {e}")
+            return None
+
+    async def removeShaiyaChannel(self, guild_id: str, channel_id: int) -> dict | bool:
+        try:
+            cid = int(channel_id)
+            config = await self.getShaiyaConfig(guild_id)
+            public_channels = [c for c in config["public_channels"] if c != cid]
+            internal_channels = [c for c in config["internal_channels"] if c != cid]
+            if (
+                public_channels == config["public_channels"]
+                and internal_channels == config["internal_channels"]
+            ):
+                return False
+            payload = {
+                "public_channels": public_channels,
+                "internal_channels": internal_channels,
+                "updated_at": datetime.now(),
+            }
+            self.shaiyaConfig.document(str(guild_id)).set(payload, merge=True)
+            return {"public_channels": public_channels, "internal_channels": internal_channels}
+        except Exception as e:
+            print(f"❌ Error quitando canal Shaiya {guild_id}/{channel_id}: {e}")
+            return False
+
+    async def upsertShaiyaGs(
+        self,
+        guild_id: str,
+        user_id: int,
+        character: str,
+        rank: str = "",
+    ) -> dict | None:
+        try:
+            doc_id = f"{guild_id}_{int(user_id)}"
+            payload = {
+                "guild_id": int(guild_id),
+                "user_id": int(user_id),
+                "character": str(character).strip(),
+                "rank": str(rank or "").strip(),
+                "active": True,
+                "updated_at": datetime.now(),
+            }
+            ref = self.shaiyaGs.document(doc_id)
+            if not ref.get().exists:
+                payload["created_at"] = datetime.now()
+            ref.set(payload, merge=True)
+            return payload
+        except Exception as e:
+            print(f"❌ Error guardando GS Shaiya {guild_id}/{user_id}: {e}")
+            return None
+
+    async def deactivateShaiyaGs(self, guild_id: str, user_id: int) -> bool:
+        try:
+            doc_id = f"{guild_id}_{int(user_id)}"
+            ref = self.shaiyaGs.document(doc_id)
+            if not ref.get().exists:
+                return False
+            ref.set({"active": False, "updated_at": datetime.now()}, merge=True)
+            return True
+        except Exception as e:
+            print(f"❌ Error desactivando GS Shaiya {guild_id}/{user_id}: {e}")
+            return False
+
+    async def getShaiyaGs(self, guild_id: str, *, active_only: bool = True) -> list[dict]:
+        try:
+            query = self.shaiyaGs.where("guild_id", "==", int(guild_id))
+            results = []
+            for doc in query.stream():
+                data = doc.to_dict() or {}
+                data["doc_id"] = doc.id
+                if active_only and not data.get("active", True):
+                    continue
+                results.append(data)
+            results.sort(key=lambda row: str(row.get("character", "")).lower())
+            return results
+        except Exception as e:
+            print(f"❌ Error listando GS Shaiya {guild_id}: {e}")
+            return []
+
+    async def getAllActiveShaiyaGs(self) -> list[dict]:
+        try:
+            results = []
+            for doc in self.shaiyaGs.where("active", "==", True).stream():
+                data = doc.to_dict() or {}
+                data["doc_id"] = doc.id
+                results.append(data)
+            return results
+        except Exception as e:
+            print(f"❌ Error listando todos los GS Shaiya: {e}")
+            return []
+
+    async def incrementShaiyaActivity(
+        self,
+        guild_id: str,
+        user_id: int,
+        week: str,
+        kind: str,
+        channel_id: int,
+    ) -> bool:
+        try:
+            if kind not in {"publico", "interno"}:
+                return False
+            doc_id = f"{guild_id}_{int(user_id)}_{week}_{kind}"
+            self.shaiyaActivity.document(doc_id).set(
+                {
+                    "guild_id": int(guild_id),
+                    "user_id": int(user_id),
+                    "week": week,
+                    "kind": kind,
+                    "count": firestore.Increment(1),
+                    "last_seen": datetime.now(),
+                    "last_channel_id": int(channel_id),
+                },
+                merge=True,
+            )
+            return True
+        except Exception as e:
+            print(f"❌ Error incrementando actividad Shaiya: {e}")
+            return False
+
+    async def getShaiyaActivityWeek(self, guild_id: str, week: str, user_ids: list[int]) -> dict[int, dict]:
+        """Devuelve {user_id: {publico, interno, last_seen}} para una semana."""
+        results: dict[int, dict] = {}
+        for uid in user_ids:
+            results[int(uid)] = {"publico": 0, "interno": 0, "last_seen": None}
+        try:
+            refs = []
+            for uid in user_ids:
+                for kind in ("publico", "interno"):
+                    refs.append(self.shaiyaActivity.document(f"{guild_id}_{int(uid)}_{week}_{kind}"))
+            if not refs:
+                return results
+            for snap in self.db.get_all(refs):
+                if not snap.exists:
+                    continue
+                data = snap.to_dict() or {}
+                uid = int(data.get("user_id") or 0)
+                kind = data.get("kind")
+                if uid not in results or kind not in {"publico", "interno"}:
+                    continue
+                results[uid][kind] = int(data.get("count") or 0)
+                last_seen = data.get("last_seen")
+                prev = results[uid]["last_seen"]
+                if last_seen and (prev is None or last_seen > prev):
+                    results[uid]["last_seen"] = last_seen
+            return results
+        except Exception as e:
+            print(f"❌ Error leyendo actividad Shaiya {guild_id}/{week}: {e}")
+            return results
 
 
 dbManager = DatabaseManager()

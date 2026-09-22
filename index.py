@@ -53,6 +53,11 @@ logging.basicConfig(level=logging.INFO)
 load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
 
+if not TOKEN:
+    print("❌ ERROR: DISCORD_TOKEN environment variable is not set!")
+    print("Please set DISCORD_TOKEN in your environment variables or .env file")
+    sys.exit(1)
+
 intents = discord.Intents.default()
 intents.message_content = True
 intents.members = True

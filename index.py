@@ -91,14 +91,17 @@ class CustomBot(commands.Bot):
             if filename.endswith('.py'):
                 cog_name = f'cogs.{filename[:-3]}'
                 try:
-                    self.unload_extension(cog_name)  # Desactiva el cog si ya está cargado
-                    await self.load_extension(cog_name)
-                    print(f'✅ Reloaded {filename[:-3]}')
+                    if cog_name in self.extensions:
+                        await self.reload_extension(cog_name)
+                        print(f'✅ Reloaded {filename[:-3]}')
+                    else:
+                        await self.load_extension(cog_name)
+                        print(f'✅ Loaded {filename[:-3]}')
                 except Exception as e:
-                    print(f'❌ Failed to reload {filename[:-3]}: {e}')
+                    print(f'❌ Failed to load {filename[:-3]}: {e}')
                     import traceback
                     traceback.print_exc()
-        print("✅ All cogs reloaded")
+        print("✅ All cogs loaded")
         
         print("Loading help extension...")
         try:

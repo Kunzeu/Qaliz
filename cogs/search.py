@@ -128,7 +128,8 @@ class SearchCog(commands.Cog):
     async def search_autocomplete(self, interaction: discord.Interaction, current: str):
         """Autocompletado para el parámetro item_name del comando /search usando caché local de nombres de ítems"""
         if not self.items_cache_loaded:
-            await self.load_items_cache()
+            return [app_commands.Choice(name="⏳ Cargando ítems (toma unos minutos)...", value="loading")]
+            
         sugerencias = set()
         current_lower = current.lower().strip()
         if self.items_cache:

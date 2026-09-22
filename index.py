@@ -76,10 +76,10 @@ class CustomBot(commands.Bot):
         print("Connecting to database...")
         connected = await self.db.connect()
         if not connected:
-            print("❌ Failed to connect to database")
-            await self.close()
-            return
-        print("✅ Database connected successfully")
+            print("⚠️ Database not available - bot will run without database functionality")
+            # Don't close the bot, just continue without database
+        else:
+            print("✅ Database connected successfully")
         
         print("Reloading all cogs...")
         for filename in os.listdir('./cogs'):

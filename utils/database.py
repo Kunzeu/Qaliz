@@ -1,4 +1,4 @@
-﻿import os
+import os
 from datetime import datetime, timedelta
 import firebase_admin
 from firebase_admin import credentials, firestore
@@ -423,5 +423,14 @@ class DatabaseManager:
 
     # ─────────────────────────────────────────────────────────
 
-dbManager = DatabaseManager()
+try:
+    dbManager = DatabaseManager()
+except Exception as e:
+    print(f"FATAL ERROR INITIALIZING DATABASE: {e}")
+    import traceback
+    traceback.print_exc()
+    import sys
+    sys.stdout.flush()
+    dbManager = None
+
 

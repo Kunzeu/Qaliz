@@ -118,6 +118,10 @@ class SearchCog(commands.Cog):
             logger.error(f"Error cargando la caché de ítems: {e}")
 
     async def cog_load(self):
+        # Run cache loading in the background to avoid blocking bot startup
+        self.bot.loop.create_task(self._background_cache_load())
+
+    async def _background_cache_load(self):
         await self.load_items_cache()
         logger.info("Caché de ítems de GW2 lista para autocompletado.")
 

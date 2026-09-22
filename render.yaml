@@ -1,0 +1,40 @@
+services:
+  - type: web
+    name: qaliz-discord-bot
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: python index.py
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11
+      - key: PORT
+        value: 10000
+      # Variables de entorno requeridas (configurar manualmente en Render)
+      - key: DISCORD_TOKEN
+        sync: false
+      - key: FIREBASE_TYPE
+        sync: false
+      - key: FIREBASE_PROJECT_ID
+        sync: false
+      - key: FIREBASE_PRIVATE_KEY_ID
+        sync: false
+      - key: FIREBASE_PRIVATE_KEY
+        sync: false
+      - key: FIREBASE_CLIENT_EMAIL
+        sync: false
+      - key: FIREBASE_CLIENT_ID
+        sync: false
+      - key: FIREBASE_AUTH_URI
+        sync: false
+      - key: FIREBASE_TOKEN_URI
+        sync: false
+      - key: FIREBASE_AUTH_PROVIDER_X509_CERT_URL
+        sync: false
+      - key: FIREBASE_CLIENT_X509_CERT_URL
+        sync: false
+      - key: FIREBASE_UNIVERSE_DOMAIN
+        sync: false
+      # Variables opcionales
+      - key: SYNC_COMMANDS
+        value: "false"
+        sync: false

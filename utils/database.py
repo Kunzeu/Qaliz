@@ -16,6 +16,29 @@ load_dotenv()
 
 class DatabaseManager:
     def __init__(self):
+        # Check if required Firebase environment variables are present
+        required_vars = [
+            'FIREBASE_TYPE', 'FIREBASE_PROJECT_ID', 'FIREBASE_PRIVATE_KEY_ID',
+            'FIREBASE_PRIVATE_KEY', 'FIREBASE_CLIENT_EMAIL', 'FIREBASE_CLIENT_ID',
+            'FIREBASE_AUTH_URI', 'FIREBASE_TOKEN_URI',
+            'FIREBASE_AUTH_PROVIDER_X509_CERT_URL', 'FIREBASE_CLIENT_X509_CERT_URL',
+            'FIREBASE_UNIVERSE_DOMAIN'
+        ]
+        
+        missing_vars = [var for var in required_vars if not os.getenv(var)]
+        
+        if missing_vars:
+            print(f"❌ Missing Firebase environment variables: {', '.join(missing_vars)}")
+            print("❌ Database initialization skipped. Set these variables in Render dashboard.")
+            self.db = None
+            self.apiKeys = None
+            self.reminders = None
+            self.blacklist = None
+            self.roulettes = None
+            self.events = None
+            self.logAutoupload = None
+            return
+        
         firebase_config = {
             "type": os.getenv('FIREBASE_TYPE'),
             "project_id": os.getenv('FIREBASE_PROJECT_ID'),
@@ -30,19 +53,33 @@ class DatabaseManager:
             "universe_domain": os.getenv('FIREBASE_UNIVERSE_DOMAIN')
         }
         
-        if not firebase_admin._apps:
-            self.cred = credentials.Certificate(firebase_config)
-            firebase_admin.initialize_app(self.cred)
-        
-        self.db = firestore.client()
-        self.apiKeys = self.db.collection('api_keys')
-        self.reminders = self.db.collection('reminders')
-        self.blacklist = self.db.collection('blacklist')
-        self.roulettes = self.db.collection('roulettes')
-        self.events = self.db.collection('events')
-        self.logAutoupload = self.db.collection('log_autoupload')
+        try:
+            if not firebase_admin._apps:
+                self.cred = credentials.Certificate(firebase_config)
+                firebase_admin.initialize_app(self.cred)
+            
+            self.db = firestore.client()
+            self.apiKeys = self.db.collection('api_keys')
+            self.reminders = self.db.collection('reminders')
+            self.blacklist = self.db.collection('blacklist')
+            self.roulettes = self.db.collection('roulettes')
+            self.events = self.db.collection('events')
+            self.logAutoupload = self.db.collection('log_autoupload')
+            print("✅ Firebase initialized successfully")
+        except Exception as e:
+            print(f"❌ Error initializing Firebase: {e}")
+            self.db = None
+            self.apiKeys = None
+            self.reminders = None
+            self.blacklist = None
+            self.roulettes = None
+            self.events = None
+            self.logAutoupload = None
 
     async def connect(self):
+        if self.db is None:
+            print('❌ Database not initialized (missing environment variables)')
+            return False
         try:
             doc_ref = self.db.collection('test').document('ping')
             doc_ref.set({'message': 'ping'})
@@ -53,6 +90,9 @@ class DatabaseManager:
             return False
     
     async def setApiKey(self, userId, apiKey):
+        if self.db is None:
+            print('❌ Database not initialized')
+            return False
         try:
             # Validar la clave API y obtener el nombre de la cuenta
             async with aiohttp.ClientSession() as session:
@@ -84,6 +124,9 @@ class DatabaseManager:
             return False
     
     async def getApiKey(self, userId):
+        if self.db is None:
+            print('❌ Database not initialized')
+            return None
         try:
             doc_ref = self.apiKeys.document(str(userId))
             doc = doc_ref.get()
@@ -100,6 +143,9 @@ class DatabaseManager:
             return None
     
     async def deleteApiKey(self, userId, index=None):
+        if self.db is None:
+            print('❌ Database not initialized')
+            return False
         try:
             doc_ref = self.apiKeys.document(str(userId))
             doc = doc_ref.get()
@@ -129,6 +175,9 @@ class DatabaseManager:
             return False
     
     async def setActiveApiKey(self, userId, index):
+        if self.db is None:
+            print('❌ Database not initialized')
+            return False
         try:
             doc_ref = self.apiKeys.document(str(userId))
             doc = doc_ref.get()
@@ -150,6 +199,9 @@ class DatabaseManager:
             return False
     
     async def getApiKeysList(self, userId):
+        if self.db is None:
+            print('❌ Database not initialized')
+            return []
         try:
             doc_ref = self.apiKeys.document(str(userId))
             doc = doc_ref.get()
@@ -172,6 +224,9 @@ class DatabaseManager:
             return []
 
     async def setReminder(self, userId, reminderData):
+        if self.db is None:
+            print('❌ Database not initialized')
+            return False
         try:
             reminder_ref = self.reminders.document(str(userId))
             reminder_ref.set(reminderData)
@@ -182,6 +237,9 @@ class DatabaseManager:
             return False
     
     async def getReminder(self, userId):
+        if self.db is None:
+            print('❌ Database not initialized')
+            return None
         try:
             doc_ref = self.reminders.document(str(userId))
             doc = doc_ref.get()
@@ -191,6 +249,9 @@ class DatabaseManager:
             return None
     
     async def deleteReminder(self, userId):
+        if self.db is None:
+            print('❌ Database not initialized')
+            return False
         try:
             doc_ref = self.reminders.document(str(userId))
             doc_ref.delete()
@@ -201,6 +262,9 @@ class DatabaseManager:
             return False
     
     async def get_all_reminders(self):
+        if self.db is None:
+            print('❌ Database not initialized')
+            return []
         try:
             reminders_list = []
             docs = self.reminders.stream()
@@ -217,6 +281,9 @@ class DatabaseManager:
             return []
 
     async def addToBlacklist(self, userId, reason="No reason"):
+        if self.db is None:
+            print('❌ Database not initialized')
+            return False
         try:
             self.blacklist.document(str(userId)).set({
                 'reason': reason,
@@ -229,6 +296,9 @@ class DatabaseManager:
             return False
 
     async def removeFromBlacklist(self, userId):
+        if self.db is None:
+            print('❌ Database not initialized')
+            return False
         try:
             self.blacklist.document(str(userId)).delete()
             print(f"✅ Usuario {userId} eliminado de la blacklist")
@@ -238,6 +308,9 @@ class DatabaseManager:
             return False
 
     async def isBlacklisted(self, userId):
+        if self.db is None:
+            print('❌ Database not initialized')
+            return False
         try:
             doc = self.blacklist.document(str(userId)).get()
             return doc.exists
@@ -247,6 +320,9 @@ class DatabaseManager:
 
     async def saveRoulette(self, channel_id, data):
         """Crea o actualiza una ruleta (merge). Solo se escriben las claves presentes en `data` (excepto channel_id y updated_at)."""
+        if self.db is None:
+            print('❌ Database not initialized')
+            return False
         try:
             payload = {'channel_id': int(channel_id), 'updated_at': datetime.now()}
             if 'guild_id' in data:
@@ -269,6 +345,9 @@ class DatabaseManager:
 
     async def addRouletteParticipant(self, channel_id, user_id):
         """Añade un participante a la ruleta usando ArrayUnion (atómico, evita duplicados)."""
+        if self.db is None:
+            print('❌ Database not initialized')
+            return False
         try:
             self.roulettes.document(str(channel_id)).update({
                 'participants': firestore.ArrayUnion([int(user_id)]),
@@ -280,6 +359,9 @@ class DatabaseManager:
             return False
 
     async def deleteRoulette(self, channel_id):
+        if self.db is None:
+            print('❌ Database not initialized')
+            return False
         try:
             self.roulettes.document(str(channel_id)).delete()
             return True
@@ -289,6 +371,9 @@ class DatabaseManager:
 
     async def getActiveRoulettes(self):
         """Devuelve todas las ruletas activas (lista de dicts)."""
+        if self.db is None:
+            print('❌ Database not initialized')
+            return []
         try:
             results = []
             docs = self.roulettes.where('active', '==', True).stream()
@@ -307,6 +392,9 @@ class DatabaseManager:
 
     async def saveEvent(self, event_data: dict) -> bool:
         """Guarda un nuevo evento en Firestore."""
+        if self.db is None:
+            print('❌ Database not initialized')
+            return False
         try:
             doc_id = str(event_data.get("doc_id", event_data.get("message_id", "")))
             payload = {
@@ -330,6 +418,9 @@ class DatabaseManager:
 
     async def getEvent(self, doc_id: str) -> dict | None:
         """Obtiene un evento por su ID (= message_id)."""
+        if self.db is None:
+            print('❌ Database not initialized')
+            return None
         try:
             doc = self.events.document(str(doc_id)).get()
             if not doc.exists:
@@ -343,6 +434,9 @@ class DatabaseManager:
 
     async def updateEventRoles(self, doc_id: str, roles: list) -> bool:
         """Actualiza la lista de roles (con participantes) de un evento."""
+        if self.db is None:
+            print('❌ Database not initialized')
+            return False
         try:
             self.events.document(str(doc_id)).update({"roles": roles})
             return True
@@ -352,6 +446,9 @@ class DatabaseManager:
 
     async def updateEventStatus(self, doc_id: str, status: str) -> bool:
         """Actualiza el estado de un evento (open / closed / cancelled)."""
+        if self.db is None:
+            print('❌ Database not initialized')
+            return False
         try:
             self.events.document(str(doc_id)).update({"status": status})
             return True
@@ -361,6 +458,9 @@ class DatabaseManager:
 
     async def getOpenEvents(self) -> list:
         """Devuelve todos los eventos con status='open'."""
+        if self.db is None:
+            print('❌ Database not initialized')
+            return []
         try:
             results = []
             for doc in self.events.where("status", "==", "open").stream():
@@ -374,6 +474,9 @@ class DatabaseManager:
 
     async def getGuildEvents(self, guild_id: str) -> list:
         """Devuelve todos los eventos de un servidor."""
+        if self.db is None:
+            print('❌ Database not initialized')
+            return []
         try:
             results = []
             for doc in self.events.where("guild_id", "==", int(guild_id)).stream():
@@ -386,6 +489,9 @@ class DatabaseManager:
             return []
 
     async def getLogAutouploadConfig(self, guild_id: str) -> dict:
+        if self.db is None:
+            print('❌ Database not initialized')
+            return {"enabled": False, "channel_id": None, "only_success": True}
         try:
             doc = self.logAutoupload.document(str(guild_id)).get()
             if not doc.exists:
@@ -401,6 +507,9 @@ class DatabaseManager:
             return {"enabled": False, "channel_id": None, "only_success": True}
 
     async def setLogAutouploadConfig(self, guild_id: str, config: dict) -> bool:
+        if self.db is None:
+            print('❌ Database not initialized')
+            return False
         try:
             payload = {
                 "enabled": bool(config.get("enabled", False)),
@@ -416,6 +525,9 @@ class DatabaseManager:
             return False
 
     async def getEnabledLogAutouploadGuilds(self) -> list[dict]:
+        if self.db is None:
+            print('❌ Database not initialized')
+            return []
         try:
             results = []
             for doc in self.logAutoupload.where("enabled", "==", True).stream():

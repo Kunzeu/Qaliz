@@ -1,14 +1,35 @@
+print("Starting Python execution...")
+import sys
+sys.stdout.flush()
+
+print("Importing discord...")
+sys.stdout.flush()
 import discord
 from discord.ext import commands
+
+print("Importing os/dotenv/asyncio...")
+sys.stdout.flush()
 import os
 from dotenv import load_dotenv
 import asyncio
+
+print("Importing flask...")
+sys.stdout.flush()
 from flask import Flask
 import threading
+
+print("Importing utils.database...")
+sys.stdout.flush()
 from utils.database import DatabaseManager
+
+print("Importing others...")
+sys.stdout.flush()
 import time
 import json
 import logging
+
+print("All imports successful!")
+sys.stdout.flush()
 
 # Configuración de Flask
 app = Flask(__name__)

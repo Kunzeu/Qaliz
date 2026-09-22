@@ -1,9 +1,16 @@
+print("   -> Importing os/datetime in database.py...")
 import os
 from datetime import datetime, timedelta
+
+print("   -> Importing firebase_admin in database.py...")
 import firebase_admin
 from firebase_admin import credentials, firestore
+
+print("   -> Importing dotenv/aiohttp in database.py...")
 from dotenv import load_dotenv
 import aiohttp
+
+print("   -> Database imports successful!")
 
 load_dotenv()
 

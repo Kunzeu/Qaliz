@@ -521,7 +521,7 @@ class Logs(commands.Cog):
             log_dirs=log_dirs,
             poll_seconds=float(os.getenv("LOG_AUTOUPLOAD_POLL_SECONDS", "8")),
             only_success=_env_bool("LOG_AUTOUPLOAD_ONLY_SUCCESS", True),
-            min_players=_env_int("LOG_AUTOUPLOAD_MIN_PLAYERS", 4),
+            min_players=_env_int("LOG_AUTOUPLOAD_MIN_PLAYERS", 1),
             max_file_size=MAX_FILE_SIZE,
             user_token=os.getenv("DPS_REPORT_USER_TOKEN") or None,
             analyze_fn=_analyze_upload_payload,

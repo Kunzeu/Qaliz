@@ -137,7 +137,7 @@ class LogAutouploader:
     log_dirs: list[str]
     poll_seconds: float = 8.0
     only_success: bool = True
-    min_players: int = 4
+    min_players: int = 1
     max_file_size: int = 50 * 1024 * 1024
     user_token: Optional[str] = None
     analyze_fn: Optional[Callable] = None

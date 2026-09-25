@@ -447,7 +447,7 @@ def build_analysis_notes(
             if alac < QUICK_ALAC_BOON_THRESHOLD:
                 low_parts.append(f"**Alacrity** {alac:.2f}%")
             if low_parts:
-                sg_label = f"Subgrupo {sg_num}" if multi_subgroup else "Escuadra"
+                sg_label = f"Subgrupo {sg_num}" if multi_subgroup else "Squad"
                 notes.append(
                     f"⚠️ {sg_label}: {' · '.join(low_parts)} — "
                     f"por debajo del {QUICK_ALAC_BOON_THRESHOLD:.0f}%."
@@ -583,7 +583,7 @@ def build_log_embed(
         for sg_num in sorted(subgroup_stats):
             sg_players = [p for p in players if p["group"] == sg_num]
             stats = subgroup_stats[sg_num]
-            header = f"Subgrupo {sg_num}" if multi_sg else "Escuadra"
+            header = f"Subgrupo {sg_num}" if multi_sg else "Squad"
             lines = [_player_line(p) for p in sg_players]
             summary = _subgroup_summary(stats["boon_avg"], sg_players, boon_display_fn)
             boon_line = _subgroup_boon_line(stats["boon_avg"], boon_display_fn)
